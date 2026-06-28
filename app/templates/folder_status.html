@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block title %}BriefTune{% endblock %}
+
+{% block content %}
+  {% if refresh_interval %}
+    <script>
+      window.setTimeout(function () {
+        window.location.reload();
+      }, {{ refresh_interval * 1000 }});
+    </script>
+  {% endif %}
+
+  <section class="results-block">
+    <h2>Folder batch progress</h2>
+    <p>{{ job.message }}</p>
+
+    <div class="progress-shell" aria-label="Folder batch progress">
+      <div class="progress-bar" style="width: {{ job.progress }}%"></div>
+    </div>
+    <p class="progress-meta">{{ job.progress }}% complete · {{ job.processed_files }} processed · {{ job.skipped_files }} skipped · {{ job.total }} total</p>
+
+    {% if job.judge_name %}
+      <p><strong>Assigned judge:</strong> {{ job.judge_name }}</p>
+    {% endif %}
+
+    {% if job.status == 'done' %}
+      <p>The folder batch finished. The one-file upload flow is still available on the homepage.</p>
+    {% else %}
+      <p>This page refreshes automatically while the batch is running.</p>
+    {% endif %}
+  </section>
+
+  {% if job.errors %}
+    <section class="results-block">
+      <h3>Errors</h3>
+      <ul class="issue-list">
+        {% for error in job.errors %}
+          <li class="issue-item">
+            <p class="issue-sentence">{{ error }}</p>
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+
+  {% if job.created_samples %}
+    <section class="results-block">
+      <h3>Loaded sources</h3>
+      <ul class="issue-list">
+        {% for sample in job.created_samples %}
+          <li class="issue-item">
+            <div class="issue-meta">{{ sample.source_type }}</div>
+            <p class="issue-sentence">{{ sample.title }}</p>
+            <p class="issue-detail">{{ sample.source }}</p>
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+
+  <a class="secondary-link" href="{{ url_for('main.index') }}">Back to home</a>
+{% endblock %}

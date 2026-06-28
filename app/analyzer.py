@@ -183,7 +183,13 @@ BURIED_CITATION_PATTERNS = [
 QUOTE_PATTERN = re.compile(r"[\"“](.+?)[\"”]")
 
 
-def analyze_text(text: str, source_type: str = "opinion") -> dict:
+def analyze_text(
+    text: str,
+    source_type: str = "opinion",
+    weight_vocabulary: float = 1.0,
+    weight_framing: float = 1.0,
+    weight_brief_refs: float = 1.0,
+) -> dict:
     cleaned_text = text.strip()
     sentences = split_sentences(cleaned_text)
     issues: list[Issue] = []
@@ -279,6 +285,9 @@ def analyze_text(text: str, source_type: str = "opinion") -> dict:
         weighted_issue_total,
         len(brief_language_references),
         source_type,
+        weight_vocabulary=weight_vocabulary,
+        weight_framing=weight_framing,
+        weight_brief_refs=weight_brief_refs,
     )
     writing_quality = build_writing_quality_summary(cleaned_text, writing_quality_flags)
 
@@ -582,6 +591,9 @@ def build_summary(
     weighted_issue_total: int,
     brief_reference_count: int,
     source_type: str,
+    weight_vocabulary: float = 1.0,
+    weight_framing: float = 1.0,
+    weight_brief_refs: float = 1.0,
 ) -> AnalysisSummary:
     affinity_score = 50
     factors: list[str] = []
@@ -589,7 +601,7 @@ def build_summary(
     average_sentence_length = word_count / sentence_count if sentence_count else 0
 
     vocabulary_hits, vocabulary_examples = count_matches(text, OPINION_STYLE_TERMS)
-    vocabulary_bonus = min(18, vocabulary_hits * 3)
+    vocabulary_bonus = min(18, int(vocabulary_hits * 3 * weight_vocabulary))
     if vocabulary_bonus:
         affinity_score += vocabulary_bonus
         factors.append(
@@ -600,7 +612,7 @@ def build_summary(
         factors.append("Uses few opinion-style terms, so the style signal is lighter.")
 
     framing_hits, framing_examples = count_regex_matches(text, FRAMING_PATTERNS)
-    framing_bonus = min(18, framing_hits * 4)
+    framing_bonus = min(18, int(framing_hits * 4 * weight_framing))
     if framing_bonus:
         affinity_score += framing_bonus
         factors.append(
@@ -611,7 +623,7 @@ def build_summary(
         factors.append("Shows little majority-opinion framing, so the alignment signal is thinner.")
 
     if brief_reference_count:
-        brief_bonus = min(28, brief_reference_count * 18)
+        brief_bonus = min(28, int(brief_reference_count * 18 * weight_brief_refs))
         affinity_score += brief_bonus
         factors.append(
             f"Quotes or references {brief_reference_count} brief-linked passage(s), which strongly boosts affinity when the judge echoes that language."

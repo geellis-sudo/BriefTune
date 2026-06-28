@@ -4,6 +4,11 @@
 
 {% block content %}
   <form class="analysis-form" method="post" action="{{ url_for('main.analyze') }}" enctype="multipart/form-data">
+    <section class="disclosure-banner">
+      <strong>Firm documents are processed locally.</strong>
+      <span>When you upload a firm-supplied document, only anonymized linguistic patterns are used for analysis. Proper nouns, client names, case numbers, and dollar figures are removed before analysis.</span>
+    </section>
+
     {% if samples %}
       <section class="sample-picker sample-picker--opinion">
         <div class="section-heading">
@@ -58,13 +63,98 @@
     <label for="opinion_file">Upload a .txt or PDF opinion file</label>
     <input id="opinion_file" name="opinion_file" type="file" accept=".txt,.pdf,text/plain,application/pdf">
 
+    <label for="firm_file">Upload a firm document</label>
+    <input id="firm_file" name="firm_file" type="file" accept=".txt,.pdf,text/plain,application/pdf">
+
+    <section class="sample-picker sample-picker--folder">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Folder source</p>
+          <h2>Load a local folder</h2>
+        </div>
+        <p>Choose a folder path containing `.txt`, `.pdf`, or `.docx` files. Existing files are skipped automatically by content hash.</p>
+      </div>
+
+      <label for="folder_path">Folder path</label>
+      <input id="folder_path" name="folder_path" type="text" placeholder="/Users/you/Documents/Judge Folder">
+
+      <label for="folder_context">Folder context</label>
+      <select id="folder_context" name="folder_context">
+        <option value="">Auto-detect if possible</option>
+        <option value="specific_judge">Specific judge — enter name</option>
+        <option value="firm">General firm winning briefs</option>
+        <option value="mixed">Mixed sources requiring manual categorization</option>
+      </select>
+
+      <label for="folder_judge_name">Judge name, if known</label>
+      <input id="folder_judge_name" name="folder_judge_name" type="text" list="known_judges" placeholder="Judge name or justice name">
+      <datalist id="known_judges">
+        {% for judge in known_judges %}
+          <option value="{{ judge }}"></option>
+        {% endfor %}
+      </datalist>
+
+      <div class="actions">
+        <button class="secondary-button" type="submit" formaction="{{ url_for('main.load_folder') }}">Load folder</button>
+      </div>
+    </section>
+
+    <section class="sample-picker sample-picker--weights">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Affinity score weights</p>
+          <h2>Adjust signal weighting</h2>
+        </div>
+        <p>Control how much each signal type contributes to the Affinity Score. Default is 100% for each.</p>
+      </div>
+
+      <div class="weight-sliders">
+        <div class="weight-slider-row">
+          <div class="weight-slider-header">
+            <label for="weight_vocabulary">Vocabulary signal</label>
+            <span class="slider-value" id="weight_vocabulary_label">100%</span>
+          </div>
+          <input id="weight_vocabulary" name="weight_vocabulary" type="range" min="0" max="200" value="100" step="10">
+          <p class="slider-hint">How much opinion-style vocabulary matching contributes.</p>
+        </div>
+
+        <div class="weight-slider-row">
+          <div class="weight-slider-header">
+            <label for="weight_framing">Issue framing signal</label>
+            <span class="slider-value" id="weight_framing_label">100%</span>
+          </div>
+          <input id="weight_framing" name="weight_framing" type="range" min="0" max="200" value="100" step="10">
+          <p class="slider-hint">How much majority-opinion framing patterns contribute.</p>
+        </div>
+
+        <div class="weight-slider-row">
+          <div class="weight-slider-header">
+            <label for="weight_brief_refs">Brief reference signal</label>
+            <span class="slider-value" id="weight_brief_refs_label">100%</span>
+          </div>
+          <input id="weight_brief_refs" name="weight_brief_refs" type="range" min="0" max="200" value="100" step="10">
+          <p class="slider-hint">How much brief-linked quotations and references contribute.</p>
+        </div>
+      </div>
+    </section>
+
     <div class="actions">
       <button type="submit">Run analysis</button>
     </div>
   </form>
 
+  <script>
+    ["weight_vocabulary", "weight_framing", "weight_brief_refs"].forEach(function(id) {
+      var input = document.getElementById(id);
+      var label = document.getElementById(id + "_label");
+      input.addEventListener("input", function() {
+        label.textContent = input.value + "%";
+      });
+    });
+  </script>
+
   <section class="helper-panel">
     <h2>How it works</h2>
-    <p>Start with the bundled opinions to see the workflow. Later, add `.txt` or PDF files to <code>data/opinions/</code>, or upload one-off files in either format. PDFs are extracted to text automatically.</p>
+    <p>Start with judicial opinions to see the workflow, then add appellate oral argument transcripts or firm-supplied documents as additional sources. Firm documents are processed locally, anonymized before analysis, and never used as raw identifying text. Later, add `.txt` or PDF files to <code>data/opinions/</code> or <code>data/transcripts/</code>, or upload one-off files in either format. PDFs are extracted to text automatically.</p>
   </section>
 {% endblock %}

@@ -7,6 +7,10 @@ __pycache__/
 data/opinions/*
 data/opinions/**
 data/transcripts/**
+data/firm_confidential/**
+data/firm_confidential.key
+data/audit.log
+data/processed_files.json
 .venv/
 venv/
 .DS_Store
