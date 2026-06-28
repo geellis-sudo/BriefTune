@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+
+{% block title %}BriefTune{% endblock %}
+
+{% block content %}
+  <div class="results-header">
+    <div>
+      <p class="eyebrow">Opinion used</p>
+      <h2>{{ source_label }}</h2>
+    </div>
+    <a class="secondary-link" href="{{ url_for('main.index') }}">Back</a>
+  </div>
+
+  <section class="summary-grid">
+    <div class="summary-card">
+      <span>Wds</span>
+      <strong>{{ result.word_count }}</strong>
+    </div>
+    <div class="summary-card">
+      <span>Sents</span>
+      <strong>{{ result.sentence_count }}</strong>
+    </div>
+    <div class="summary-card">
+      <span>Flags</span>
+      <strong>{{ result.issues|length }}</strong>
+    </div>
+    <div class="summary-card">
+      <span>Affinity Score</span>
+      <strong>{{ result.summary.affinity_score }}/100</strong>
+    </div>
+  </section>
+
+  <section class="results-block highlight-block">
+    <h3>Why this score</h3>
+    <p>{{ result.summary.affinity_explanation }}</p>
+    {% if result.summary.affinity_factors %}
+      <ul class="issue-list">
+        {% for factor in result.summary.affinity_factors %}
+          <li class="issue-item">
+            <p class="issue-sentence">{{ factor }}</p>
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </section>
+
+    <section class="results-block quality-block">
+      <div class="quality-header">
+        <div>
+          <p class="eyebrow quality-eyebrow">Writing Quality</p>
+          <h3>Writing Quality</h3>
+        </div>
+        <div class="quality-score-pill">{{ result.writing_quality.writing_quality_score }}/100</div>
+      </div>
+
+      <p>{{ result.writing_quality.writing_quality_explanation }}</p>
+
+      {% if result.writing_quality.writing_quality_factors %}
+        <ul class="issue-list">
+          {% for factor in result.writing_quality.writing_quality_factors %}
+            <li class="issue-item">
+              <p class="issue-sentence">{{ factor }}</p>
+            </li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+
+      {% if result.writing_quality.writing_quality_flags %}
+        <h4 class="quality-subheading">Flagged examples</h4>
+        <ul class="issue-list">
+          {% for flag in result.writing_quality.writing_quality_flags %}
+            <li class="issue-item">
+              <div class="issue-meta">{{ flag.category }}</div>
+              <p class="issue-sentence">{{ flag.example }}</p>
+              <p class="issue-suggestion">{{ flag.suggestion }}</p>
+            </li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    </section>
+
+  {% if result.brief_language_references %}
+    <section class="results-block">
+      <h3>Brief language passages</h3>
+      <ul class="issue-list">
+        {% for reference in result.brief_language_references %}
+          <li class="issue-item">
+            <div class="issue-meta">{{ reference.signal }}</div>
+            <p class="issue-sentence">{{ reference.passage }}</p>
+            <p class="issue-suggestion">This {{ reference.source_type }} passage is weighted more heavily in the suggestions because it appears to mirror the brief.</p>
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+
+  <section class="results-block">
+    <h3>Source type</h3>
+    <p>{{ source_type }}</p>
+  </section>
+
+  {% if judge_name %}
+    <section class="results-block">
+      <h3>Majority opinion author</h3>
+      <p>{{ judge_name }}</p>
+    </section>
+  {% endif %}
+
+  <section class="results-block">
+    <h3>Text</h3>
+    <p class="reviewed-text">{{ source_text }}</p>
+  </section>
+
+  <section class="results-block">
+    <h3>Signals</h3>
+    {% if result.issues %}
+      <ul class="issue-list">
+        {% for issue in result.issues %}
+          <li class="issue-item">
+            <div class="issue-meta">{{ issue.category }}</div>
+            <p class="issue-sentence">{{ issue.sentence }}</p>
+            <p class="issue-suggestion">{{ issue.suggestion }}</p>
+            {% if issue.detail %}
+              <p class="issue-detail">{{ issue.detail }}</p>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>No obvious issues found. Try a denser excerpt to surface more signals.</p>
+    {% endif %}
+  </section>
+{% endblock %}

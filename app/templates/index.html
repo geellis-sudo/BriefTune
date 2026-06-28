@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+
+{% block title %}BriefTune{% endblock %}
+
+{% block content %}
+  <form class="analysis-form" method="post" action="{{ url_for('main.analyze') }}" enctype="multipart/form-data">
+    {% if samples %}
+      <section class="sample-picker sample-picker--opinion">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Source set</p>
+            <h2>Choose a source opinion</h2>
+          </div>
+          <p>These opinions show how a judge may respond to brief language. You can also upload a `.txt` or PDF file below.</p>
+        </div>
+
+        <div class="sample-grid">
+          {% for sample in samples %}
+            <label class="sample-card">
+              <input class="sample-radio" type="radio" name="selected_sample" value="{{ sample.id }}" {% if sample.id == selected_sample_id %}checked{% endif %}>
+              <span class="sample-card-title">{{ sample.title }}</span>
+              <span class="sample-card-meta">{{ sample.court or 'Opinion' }}{% if sample.year %} · {{ sample.year }}{% endif %}</span>
+              <span class="sample-card-focus">{{ sample.focus or 'Brief signal' }}</span>
+              <span class="sample-card-preview">{{ sample.preview }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </section>
+    {% endif %}
+
+    {% if transcripts %}
+      <section class="sample-picker sample-picker--transcript">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Transcript set</p>
+            <h2>Choose a source transcript</h2>
+          </div>
+          <p>These transcripts are loaded from <code>data/transcripts/</code> and are treated the same way as opinions.</p>
+        </div>
+
+        <div class="sample-grid">
+          {% for transcript in transcripts %}
+            <label class="sample-card">
+              <input class="sample-radio" type="radio" name="selected_transcript" value="{{ transcript.id }}" {% if transcript.id == selected_transcript_id %}checked{% endif %}>
+              <span class="sample-card-title">{{ transcript.title }}</span>
+              <span class="sample-card-meta">{{ transcript.court or 'Transcript' }}</span>
+              <span class="sample-card-focus">{{ transcript.focus or 'Transcript signal' }}</span>
+              <span class="sample-card-preview">{{ transcript.preview }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </section>
+    {% endif %}
+
+    <label for="custom_text">Paste brief language</label>
+    <textarea id="custom_text" name="custom_text" rows="12" placeholder="Paste brief language, a paragraph, or an excerpt here...">{{ default_text }}</textarea>
+
+    <label for="opinion_file">Upload a .txt or PDF opinion file</label>
+    <input id="opinion_file" name="opinion_file" type="file" accept=".txt,.pdf,text/plain,application/pdf">
+
+    <div class="actions">
+      <button type="submit">Run analysis</button>
+    </div>
+  </form>
+
+  <section class="helper-panel">
+    <h2>How it works</h2>
+    <p>Start with the bundled opinions to see the workflow. Later, add `.txt` or PDF files to <code>data/opinions/</code>, or upload one-off files in either format. PDFs are extracted to text automatically.</p>
+  </section>
+{% endblock %}
