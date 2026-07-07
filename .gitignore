@@ -11,8 +11,13 @@ data/firm_confidential/**
 data/firm_confidential.key
 data/audit.log
 data/processed_files.json
+data/tracked_judges.json
+data/judge_style_profiles/**
+data/courtlistener_sync/**
+data/brief_mention_candidates.json
 .venv/
 venv/
 .DS_Store
 instance/
 *.pyc
+*.textClipping

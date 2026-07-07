@@ -187,6 +187,30 @@ def _process_folder_job(
     )
 
 
+def read_folder_texts(folder_path: str) -> list[str]:
+    """Synchronously read every supported file in a folder into a list of
+    text strings. No background job, no threading, no content-hash dedup --
+    unlike CourtListener syncing, a local folder read is free and instant, so
+    it's simplest (and always correct/fresh) to just read it in full on every
+    call rather than tracking what's "already been seen." Used by the
+    firm-folder comparison at analyze time, not by the async folder-batch
+    ("Load a local folder") pipeline above.
+    """
+    folder = Path(folder_path).expanduser()
+    if not folder.exists() or not folder.is_dir():
+        return []
+
+    texts: list[str] = []
+    for path in sorted(folder.rglob("*")):
+        if not path.is_file() or path.suffix.lower() not in SUPPORTED_FOLDER_SUFFIXES:
+            continue
+        text = read_folder_document_text(path).strip()
+        if text:
+            texts.append(text)
+
+    return texts
+
+
 def infer_judge_from_folder(folder_name: str, known_judges: list[str]) -> str:
     normalized = folder_name.replace("_", " ").replace("-", " ").strip()
     if not normalized:

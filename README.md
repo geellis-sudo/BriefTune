@@ -9,6 +9,7 @@ It is built to run even before you add real judge opinion files. If no files exi
 - Shows an opinion library so you can study judge response patterns
 - Analyzes text for a few beginner-friendly writing signals such as long sentences, passive voice hints, repeated phrasing, hedging, and dense legal jargon
 - Displays suggestions in a simple results page intended to help brief drafting land more effectively with judges
+- Can track judges on CourtListener and pull their new opinions (living corpus) straight into the judge's file library — see `WORKFLOW.md` for setup
 
 ## Run it locally
 

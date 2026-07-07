@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block title %}BriefTune{% endblock %}
+
+{% block content %}
+  {% if refresh_interval %}
+    <script>
+      window.setTimeout(function () {
+        window.location.reload();
+      }, {{ refresh_interval * 1000 }});
+    </script>
+  {% endif %}
+
+  <section class="results-block">
+    <h2>Auto-Research progress</h2>
+
+    {% if job.status in ['queued', 'running'] %}
+      <p>Step {{ job.steps_used }} of {{ job.loop_limit }} &middot; estimated cost so far ${{ "%.2f"|format(job.cost_spent_usd) }} of a ${{ "%.2f"|format(job.cost_limit_usd) }} limit.</p>
+      <p>This page refreshes automatically while the run is in progress.</p>
+    {% elif job.status == 'error' %}
+      <p class="brief-candidate-status brief-candidate-status--rejected">Stopped with an error</p>
+      <p>{{ job.error }}</p>
+    {% else %}
+      <p>
+        Finished in {{ job.steps_used }} step(s) &middot; estimated cost ${{ "%.2f"|format(job.cost_spent_usd) }}
+        {% if job.stopped_reason == 'loop_limit' %}
+          &middot; stopped because the loop limiter was reached before a confident answer was found
+        {% elif job.stopped_reason == 'cost_limit' %}
+          &middot; stopped because the price limiter was reached before a confident answer was found
+        {% endif %}
+      </p>
+
+      <h3>Result</h3>
+      {% if job.outcome == 'prevailed' %}
+        <p><strong>{{ job.prevailing_party or "The discussed party" }} prevailed</strong> on this point, according to the opinion text.</p>
+      {% elif job.outcome == 'did_not_prevail' %}
+        <p><strong>{{ job.prevailing_party or "The discussed party" }} did not prevail</strong> on this point.</p>
+      {% else %}
+        <p><strong>Inconclusive</strong> &mdash; not confident enough to record an outcome automatically.</p>
+      {% endif %}
+
+      {% if job.reasoning_summary %}
+        <p class="issue-suggestion">{{ job.reasoning_summary }}</p>
+      {% endif %}
+
+      {% if job.candidate_status_applied %}
+        <p>Recorded on this case as <strong>{{ job.candidate_status_applied.replace('_', ' ') }}</strong>{% if job.brief_text_found %} with the brief text attached{% endif %}. Review it below and edit it manually if anything looks off.</p>
+      {% else %}
+        <p>Nothing was recorded automatically &mdash; this case is still marked unverified. Review it manually on the homepage, or re-run Auto-Research with a higher loop or price limit.</p>
+      {% endif %}
+
+      {% if job.brief_source %}
+        <p class="issue-detail">Brief source: {{ job.brief_source }}</p>
+      {% endif %}
+    {% endif %}
+  </section>
+
+  <a class="secondary-link" href="{{ url_for('main.index') }}">Back to home</a>
+{% endblock %}

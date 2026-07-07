@@ -11,38 +11,95 @@
     <a class="secondary-link" href="{{ url_for('main.index') }}">Back</a>
   </div>
 
-  <section class="summary-grid">
-    <div class="summary-card">
-      <span>Wds</span>
-      <strong>{{ result.word_count }}</strong>
+  {% if secondary_result %}
+    <div class="comparison-toggle">
+      <button type="button" class="comparison-toggle-btn active" data-target="primary">{{ primary_label or "Comparison A" }}</button>
+      <button type="button" class="comparison-toggle-btn" data-target="secondary">{{ secondary_label or "Comparison B" }}</button>
     </div>
-    <div class="summary-card">
-      <span>Sents</span>
-      <strong>{{ result.sentence_count }}</strong>
-    </div>
-    <div class="summary-card">
-      <span>Flags</span>
-      <strong>{{ result.issues|length }}</strong>
-    </div>
-    <div class="summary-card">
-      <span>Affinity Score</span>
-      <strong>{{ result.summary.affinity_score }}/100</strong>
-    </div>
-  </section>
+  {% endif %}
 
-  <section class="results-block highlight-block">
-    <h3>Why this score</h3>
-    <p>{{ result.summary.affinity_explanation }}</p>
-    {% if result.summary.affinity_factors %}
-      <ul class="issue-list">
-        {% for factor in result.summary.affinity_factors %}
-          <li class="issue-item">
-            <p class="issue-sentence">{{ factor }}</p>
-          </li>
-        {% endfor %}
-      </ul>
-    {% endif %}
-  </section>
+  <div id="comparison-primary" class="comparison-view">
+    <section class="summary-grid">
+      <div class="summary-card">
+        <span>Wds</span>
+        <strong>{{ result.word_count }}</strong>
+      </div>
+      <div class="summary-card">
+        <span>Sents</span>
+        <strong>{{ result.sentence_count }}</strong>
+      </div>
+      <div class="summary-card">
+        <span>Flags</span>
+        <strong>{{ result.issues|length }}</strong>
+      </div>
+      <div class="summary-card">
+        <span>Affinity Score</span>
+        <strong>{{ result.summary.affinity_score }}/100</strong>
+      </div>
+    </section>
+
+    <section class="results-block highlight-block">
+      <h3>Why this score</h3>
+      <p>{{ result.summary.affinity_explanation }}</p>
+      {% if result.summary.affinity_factors %}
+        <ul class="issue-list">
+          {% for factor in result.summary.affinity_factors %}
+            <li class="issue-item">
+              <p class="issue-sentence">{{ factor }}</p>
+            </li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    </section>
+  </div>
+
+  {% if secondary_result %}
+    <div id="comparison-secondary" class="comparison-view" hidden>
+      <section class="summary-grid">
+        <div class="summary-card">
+          <span>Wds</span>
+          <strong>{{ secondary_result.word_count }}</strong>
+        </div>
+        <div class="summary-card">
+          <span>Sents</span>
+          <strong>{{ secondary_result.sentence_count }}</strong>
+        </div>
+        <div class="summary-card">
+          <span>Flags</span>
+          <strong>{{ secondary_result.issues|length }}</strong>
+        </div>
+        <div class="summary-card">
+          <span>Affinity Score</span>
+          <strong>{{ secondary_result.summary.affinity_score }}/100</strong>
+        </div>
+      </section>
+
+      <section class="results-block highlight-block">
+        <h3>Why this score</h3>
+        <p>{{ secondary_result.summary.affinity_explanation }}</p>
+        {% if secondary_result.summary.affinity_factors %}
+          <ul class="issue-list">
+            {% for factor in secondary_result.summary.affinity_factors %}
+              <li class="issue-item">
+                <p class="issue-sentence">{{ factor }}</p>
+              </li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+      </section>
+    </div>
+
+    <script>
+      document.querySelectorAll(".comparison-toggle-btn").forEach(function (button) {
+        button.addEventListener("click", function () {
+          document.querySelectorAll(".comparison-toggle-btn").forEach(function (b) { b.classList.remove("active"); });
+          button.classList.add("active");
+          document.getElementById("comparison-primary").hidden = button.dataset.target !== "primary";
+          document.getElementById("comparison-secondary").hidden = button.dataset.target !== "secondary";
+        });
+      });
+    </script>
+  {% endif %}
 
     <section class="results-block quality-block">
       <div class="quality-header">
@@ -79,6 +136,47 @@
       {% endif %}
     </section>
 
+  {% if ai_writing_coach %}
+    <section class="results-block quality-block">
+      <div class="quality-header">
+        <div>
+          <p class="eyebrow quality-eyebrow">AI Writing Coach</p>
+          <h3>AI Writing Coach</h3>
+        </div>
+        {% if ai_writing_coach.available %}
+          <div class="quality-score-pill">${{ "%.2f"|format(ai_writing_coach.cost_usd) }}</div>
+        {% endif %}
+      </div>
+
+      {% if ai_writing_coach.available %}
+        <p>{{ ai_writing_coach.overall_assessment }}</p>
+
+        {% if ai_writing_coach.suggestions %}
+          <h4 class="quality-subheading">Suggestions</h4>
+          <ul class="issue-list">
+            {% for suggestion in ai_writing_coach.suggestions %}
+              <li class="issue-item">
+                <div class="issue-meta">{{ suggestion.category }}</div>
+                {% if suggestion.quote %}
+                  <p class="issue-sentence">&ldquo;{{ suggestion.quote }}&rdquo;</p>
+                {% endif %}
+                <p class="issue-suggestion">{{ suggestion.suggestion }}</p>
+                {% if suggestion.rationale %}
+                  <p class="issue-detail">{{ suggestion.rationale }}</p>
+                {% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p>No additional suggestions beyond what's already flagged above.</p>
+        {% endif %}
+      {% else %}
+        <p class="brief-candidate-status brief-candidate-status--rejected">Couldn't complete this pass</p>
+        <p>{{ ai_writing_coach.error }}</p>
+      {% endif %}
+    </section>
+  {% endif %}
+
   {% if result.brief_language_references %}
     <section class="results-block">
       <h3>Brief language passages</h3>
@@ -103,6 +201,13 @@
     <section class="results-block">
       <h3>Majority opinion author</h3>
       <p>{{ judge_name }}</p>
+    </section>
+  {% endif %}
+
+  {% if compare_judge_name %}
+    <section class="results-block">
+      <h3>Compared against</h3>
+      <p>{{ compare_judge_name }}'s synced style profile and any briefs verified as prevailing before them.</p>
     </section>
   {% endif %}
 

@@ -4,157 +4,357 @@
 
 {% block content %}
   <form class="analysis-form" method="post" action="{{ url_for('main.analyze') }}" enctype="multipart/form-data">
-    <section class="disclosure-banner">
-      <strong>Firm documents are processed locally.</strong>
-      <span>When you upload a firm-supplied document, only anonymized linguistic patterns are used for analysis. Proper nouns, client names, case numbers, and dollar figures are removed before analysis.</span>
-    </section>
-
-    {% if samples %}
-      <section class="sample-picker sample-picker--opinion">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">Source set</p>
-            <h2>Choose a source opinion</h2>
-          </div>
-          <p>These opinions show how a judge may respond to brief language. You can also upload a `.txt` or PDF file below.</p>
-        </div>
-
-        <div class="sample-grid">
-          {% for sample in samples %}
-            <label class="sample-card">
-              <input class="sample-radio" type="radio" name="selected_sample" value="{{ sample.id }}" {% if sample.id == selected_sample_id %}checked{% endif %}>
-              <span class="sample-card-title">{{ sample.title }}</span>
-              <span class="sample-card-meta">{{ sample.court or 'Opinion' }}{% if sample.year %} · {{ sample.year }}{% endif %}</span>
-              <span class="sample-card-focus">{{ sample.focus or 'Brief signal' }}</span>
-              <span class="sample-card-preview">{{ sample.preview }}</span>
-            </label>
-          {% endfor %}
-        </div>
-      </section>
-    {% endif %}
-
-    {% if transcripts %}
-      <section class="sample-picker sample-picker--transcript">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">Transcript set</p>
-            <h2>Choose a source transcript</h2>
-          </div>
-          <p>These transcripts are loaded from <code>data/transcripts/</code> and are treated the same way as opinions.</p>
-        </div>
-
-        <div class="sample-grid">
-          {% for transcript in transcripts %}
-            <label class="sample-card">
-              <input class="sample-radio" type="radio" name="selected_transcript" value="{{ transcript.id }}" {% if transcript.id == selected_transcript_id %}checked{% endif %}>
-              <span class="sample-card-title">{{ transcript.title }}</span>
-              <span class="sample-card-meta">{{ transcript.court or 'Transcript' }}</span>
-              <span class="sample-card-focus">{{ transcript.focus or 'Transcript signal' }}</span>
-              <span class="sample-card-preview">{{ transcript.preview }}</span>
-            </label>
-          {% endfor %}
-        </div>
-      </section>
-    {% endif %}
-
-    <label for="custom_text">Paste brief language</label>
-    <textarea id="custom_text" name="custom_text" rows="12" placeholder="Paste brief language, a paragraph, or an excerpt here...">{{ default_text }}</textarea>
-
-    <label for="opinion_file">Upload a .txt or PDF opinion file</label>
-    <input id="opinion_file" name="opinion_file" type="file" accept=".txt,.pdf,text/plain,application/pdf">
-
-    <label for="firm_file">Upload a firm document</label>
-    <input id="firm_file" name="firm_file" type="file" accept=".txt,.pdf,text/plain,application/pdf">
-
-    <section class="sample-picker sample-picker--folder">
+    <section class="sample-picker sample-picker--courtlistener">
       <div class="section-heading">
         <div>
-          <p class="eyebrow">Folder source</p>
-          <h2>Load a local folder</h2>
+          <h2>Track a judge on CourtListener</h2>
         </div>
-        <p>Choose a folder path containing `.txt`, `.pdf`, or `.docx` files. Existing files are skipped automatically by content hash.</p>
+        <div class="section-description">
+          Track a judge and BriefTune can pull their opinions (and, where available, relevant briefs as well as oral argument transcripts) straight into this judge's corpus. Requires a CourtListener API key.
+          <details class="info-note">
+            <summary data-preview="A CourtListener API key is required for tracking or syncing a judge to actually pull anything. Click &quot;more&quot; for additional detail.">more</summary>
+            <p>CourtListener is the free legal-research site BriefTune pulls opinions, briefs, and oral argument transcripts from. You'll need your own free CourtListener account and its API key, saved as <code>COURTLISTENER_API_TOKEN</code> in your project's <code>.env</code> file, before tracking or syncing a judge will actually fetch anything.</p>
+          </details>
+        </div>
       </div>
 
-      <label for="folder_path">Folder path</label>
-      <input id="folder_path" name="folder_path" type="text" placeholder="/Users/you/Documents/Judge Folder">
+      {% if tracked_judges %}
+        <table class="tracked-judges-table">
+          <thead>
+            <tr>
+              <th>Judge</th>
+              <th>Court</th>
+              <th>
+                Last synced
+                <details class="info-note">
+                  <summary data-preview="The first sync pulls in everything CourtListener has for this judge; every sync after that only pulls what's newly filed since last time. Click &quot;more&quot; for additional detail.">more</summary>
+                  <p>Tracking a judge just remembers who they are -- it doesn't pull anything by itself. Syncing is the actual fetch. The very first sync for a judge has no starting point yet, so BriefTune asks CourtListener for everything it has for that judge and pulls in all of it. Every sync after that only asks for opinions and oral arguments filed since the last successful sync, so it's incremental from there on -- nothing already pulled in gets re-fetched. Either way, every opinion that comes in also gets scanned for language that looks like it's quoting or discussing a brief -- that's a scan of text already pulled in, not a separate fetch, and it's what creates entries in "Flagged brief mentions" below. Click "Sync now" to run this for one judge, or "Sync all tracked judges now" to sync everyone at once. This column shows when that last happened, or "Never" if it hasn't run yet.</p>
+                </details>
+              </th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for judge in tracked_judges %}
+              <tr>
+                <td>{{ judge.name }}</td>
+                <td>{{ judge.court or "Any" }}</td>
+                <td>{{ judge.last_synced or "Never" }}</td>
+                <td class="tracked-judges-actions">
+                  <button type="submit" formaction="{{ url_for('main.courtlistener_sync_one', judge_id=judge.id) }}" formmethod="post" class="secondary-button">Sync now</button>
+                  <button type="submit" formaction="{{ url_for('main.courtlistener_untrack', judge_id=judge.id) }}" formmethod="post" class="link-button">Stop tracking</button>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        <div class="actions">
+          <button type="submit" formaction="{{ url_for('main.courtlistener_sync_all_route') }}" formmethod="post" class="secondary-button">Sync all tracked judges now</button>
+        </div>
+      {% else %}
+        <p>No judges tracked yet.</p>
+      {% endif %}
 
-      <label for="folder_context">Folder context</label>
-      <select id="folder_context" name="folder_context">
-        <option value="">Auto-detect if possible</option>
-        <option value="specific_judge">Specific judge — enter name</option>
-        <option value="firm">General firm winning briefs</option>
-        <option value="mixed">Mixed sources requiring manual categorization</option>
-      </select>
+      <label for="courtlistener_judge_name">Judge name</label>
+      <input id="courtlistener_judge_name" name="courtlistener_judge_name" type="text" placeholder="e.g. Jane A. Doe">
 
-      <label for="folder_judge_name">Judge name, if known</label>
-      <input id="folder_judge_name" name="folder_judge_name" type="text" list="known_judges" placeholder="Judge name or justice name">
-      <datalist id="known_judges">
-        {% for judge in known_judges %}
-          <option value="{{ judge }}"></option>
-        {% endfor %}
-      </datalist>
+      <label for="courtlistener_court">Court code (optional)</label>
+      <input id="courtlistener_court" name="courtlistener_court" type="text" placeholder="e.g. ca9, scotus, nysd">
 
       <div class="actions">
-        <button class="secondary-button" type="submit" formaction="{{ url_for('main.load_folder') }}">Load folder</button>
+        <button class="secondary-button" type="submit" formaction="{{ url_for('main.courtlistener_track') }}" formmethod="post">Track judge</button>
+      </div>
+    </section>
+
+    <section class="sample-picker sample-picker--draft">
+      <div class="section-heading">
+        <div>
+          <h2>Upload your draft brief</h2>
+        </div>
+      </div>
+
+      <input id="draft_file" name="draft_file" type="file" accept=".txt,.pdf,text/plain,application/pdf" class="draft-file-input">
+      <label for="draft_file" class="draft-upload-button">Upload Now</label>
+      <span class="draft-filename" id="draft-filename-display"></span>
+      <p class="slider-hint">Accepts a <code>.txt</code> or PDF file.</p>
+
+      <label for="redact_terms">Names or info to redact (optional)</label>
+      <textarea id="redact_terms" name="redact_terms" rows="2" placeholder="e.g. Acme Corporation, Jane Smith, 123 Main St"></textarea>
+      <p class="slider-hint">One item per line or comma-separated. Each exact match — client name, company name, address, anything else identifying — is redacted before analysis. Social Security numbers, phone numbers, and email addresses are always redacted automatically, whether or not you list them here. Case numbers and dollar figures are left visible since they're useful context and aren't privileged on their own.</p>
+
+      {% if ai_coach_available %}
+        <label class="checkbox-label" for="run_ai_coach">
+          <input id="run_ai_coach" name="run_ai_coach" type="checkbox" value="1">
+          Also run the AI Writing Coach on this draft
+        </label>
+        <p class="slider-hint">A deeper editorial pass beyond the automated checks below — argument structure, persuasiveness, and tone. Calls the Anthropic API directly with its own key and costs real money per run, separate from your Cowork/chat access.</p>
+      {% else %}
+        <p class="slider-hint">Set <code>ANTHROPIC_API_KEY</code> in <code>.env</code> to unlock the optional AI Writing Coach — a deeper editorial pass beyond the automated checks below.</p>
+      {% endif %}
+
+      <div class="actions actions--run">
+        <button type="submit">Run analysis</button>
+        <p class="slider-hint">Uses the settings below as they currently stand (e.g., 50/50 weighting, no firm folder) unless you change them first.</p>
       </div>
     </section>
 
     <section class="sample-picker sample-picker--weights">
       <div class="section-heading">
         <div>
-          <p class="eyebrow">Affinity score weights</p>
-          <h2>Adjust signal weighting</h2>
+          <h2 class="affinity-score-heading">
+            Affinity Score
+            <details class="info-note">
+              <summary data-preview="These two sliders are linked and always add up to 100%, so moving one weighs that signal more and the other less. This sets how much each already-measured signal counts -- it doesn't measure anything itself. Click &quot;note&quot; for the full explanation.">note</summary>
+              <p>These two sliders are linked and always add up to 100%, so moving one is a choice to weigh that signal more heavily and the other less. This sets how much each already-measured signal is weighted toward the score -- it doesn't measure anything itself; the actual match is calculated fresh from the text every time and shown in "Why this score" after you run an analysis. If one signal has nothing to measure (no synced judge style profile, no verified winning briefs, no firm folder text), its whole share is handed to the other signal automatically instead of going unused.</p>
+            </details>
+          </h2>
         </div>
-        <p>Control how much each signal type contributes to the Affinity Score. Default is 100% for each.</p>
       </div>
+
+      <label for="compare_judge_id">Compare your draft brief against a tracked judge</label>
+      <select id="compare_judge_id" name="compare_judge_id">
+        {% for judge in tracked_judges %}
+          <option value="{{ judge.id }}">{{ judge.name }}{% if judge.court %} ({{ judge.court }}){% endif %}</option>
+        {% endfor %}
+      </select>
+      <p class="slider-hint">Optional. Scores your draft against this judge's actual vocabulary/cadence (from their synced opinions) and any briefs verified as having prevailed before them, using the weighting below.</p>
 
       <div class="weight-sliders">
         <div class="weight-slider-row">
           <div class="weight-slider-header">
-            <label for="weight_vocabulary">Vocabulary signal</label>
-            <span class="slider-value" id="weight_vocabulary_label">100%</span>
+            <label for="weight_judge_style">Judge style signal</label>
+            <span class="slider-value" id="weight_judge_style_label">50%</span>
           </div>
-          <input id="weight_vocabulary" name="weight_vocabulary" type="range" min="0" max="200" value="100" step="10">
-          <p class="slider-hint">How much opinion-style vocabulary matching contributes.</p>
+          <input id="weight_judge_style" name="weight_judge_style" type="range" min="0" max="100" value="50" step="5">
+          <p class="slider-hint">How much the tracked judge's (or firm folder's) vocabulary and sentence-cadence match is weighted.</p>
         </div>
 
         <div class="weight-slider-row">
           <div class="weight-slider-header">
-            <label for="weight_framing">Issue framing signal</label>
-            <span class="slider-value" id="weight_framing_label">100%</span>
+            <label for="weight_precedent_brief">Precedent brief signal</label>
+            <span class="slider-value" id="weight_precedent_brief_label">50%</span>
           </div>
-          <input id="weight_framing" name="weight_framing" type="range" min="0" max="200" value="100" step="10">
-          <p class="slider-hint">How much majority-opinion framing patterns contribute.</p>
-        </div>
-
-        <div class="weight-slider-row">
-          <div class="weight-slider-header">
-            <label for="weight_brief_refs">Brief reference signal</label>
-            <span class="slider-value" id="weight_brief_refs_label">100%</span>
-          </div>
-          <input id="weight_brief_refs" name="weight_brief_refs" type="range" min="0" max="200" value="100" step="10">
-          <p class="slider-hint">How much brief-linked quotations and references contribute.</p>
+          <input id="weight_precedent_brief" name="weight_precedent_brief" type="range" min="0" max="100" value="50" step="5">
+          <p class="slider-hint">How much alignment with briefs verified as prevailing (or your firm folder's briefs) is weighted.</p>
         </div>
       </div>
     </section>
 
-    <div class="actions">
-      <button type="submit">Run analysis</button>
-    </div>
+    <section class="sample-picker sample-picker--folder">
+      <div class="section-heading">
+        <div>
+          <h2>
+            Your Firm's Winning Briefs Folder
+            <details class="info-note">
+              <summary data-preview="Optional -- you can populate a folder of some of your firm's winning briefs and use that as the comparison pool of documents, just like those of a tracked judge, and can be used alongside or instead of a tracked judge's corpus of opinions and any verified winning briefs upon which that judge commented. Click &quot;more&quot; for additional detail.">more</summary>
+              <p>Optional. Point this at a folder of briefs your firm has already won with (`.txt`, `.pdf`, or `.docx`). It's read fresh every time you run an analysis and compared against using the same Judge style signal and Precedent brief signal weighting above (those two labels still say "judge" — that's a known naming loose end, not fixed yet). You can use this alongside or instead of a tracked judge — if both are active, you'll get two scores with a toggle to switch between them.</p>
+            </details>
+          </h2>
+        </div>
+      </div>
+
+      <label for="firm_folder_path">Folder path</label>
+      <input id="firm_folder_path" name="firm_folder_path" type="text" placeholder="/Users/you/Documents/Firm Winning Briefs">
+    </section>
   </form>
 
+  {% if brief_candidates %}
+    <section class="sample-picker sample-picker--brief-candidates">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Precedent pipeline</p>
+          <h2>Flagged brief mentions</h2>
+        </div>
+        <p>BriefTune found these opinions where a tracked judge appears to discuss a specific brief. Confirming which side actually prevailed requires reading the case yourself (or asking Claude to research it) — pick a status below and, if the brief won, paste its text in so it feeds the Precedent brief signal.</p>
+      </div>
+
+      {% if auto_research_available and unverified_candidate_count > 1 %}
+        <div class="brief-candidate-card">
+          <form method="post" action="{{ url_for('main.courtlistener_auto_verify_all') }}">
+            <p class="slider-hint">Research all {{ unverified_candidate_count }} unverified case(s) at once — each runs independently and in parallel, using the same loop and price limiter per case as running them one at a time.</p>
+
+            <div class="weight-slider-row">
+              <div class="weight-slider-header">
+                <label for="batch_loop_limit">Loop limiter (per case)</label>
+                <span class="slider-value loop-limit-label">{{ default_loop_limit }} steps</span>
+              </div>
+              <input
+                id="batch_loop_limit"
+                name="loop_limit"
+                type="range"
+                min="3"
+                max="20"
+                step="1"
+                value="{{ default_loop_limit }}"
+                class="loop-limit-slider"
+              >
+            </div>
+
+            <div class="weight-slider-row">
+              <div class="weight-slider-header">
+                <label for="batch_cost_limit">Price limiter (per case)</label>
+                <span class="slider-value cost-limit-label">${{ "%.2f"|format(default_cost_limit_usd) }}</span>
+              </div>
+              <input
+                id="batch_cost_limit"
+                name="cost_limit_usd"
+                type="range"
+                min="0.25"
+                max="2.00"
+                step="0.25"
+                value="{{ default_cost_limit_usd }}"
+                class="cost-limit-slider"
+              >
+            </div>
+
+            <div class="actions">
+              <button type="submit" class="secondary-button">Run Auto-Research on all {{ unverified_candidate_count }} unverified cases</button>
+            </div>
+          </form>
+        </div>
+      {% endif %}
+
+      {% for candidate in brief_candidates %}
+        <div class="brief-candidate-card">
+          <div class="brief-candidate-header">
+            <strong>{{ candidate.case_name }}</strong>
+            <span class="brief-candidate-status brief-candidate-status--{{ candidate.status }}">{{ candidate.status.replace('_', ' ') }}</span>
+          </div>
+          <p class="brief-candidate-meta">{{ candidate.judge_name }} · {{ candidate.date_filed or "date unknown" }}</p>
+          {% if candidate.excerpts %}
+            <p class="brief-candidate-excerpt">&ldquo;{{ candidate.excerpts[0] }}&rdquo;</p>
+          {% endif %}
+
+          <details class="brief-candidate-verify">
+            <summary>Verify this case</summary>
+            <form method="post" action="{{ url_for('main.courtlistener_verify_candidate', candidate_id=candidate.id) }}">
+              <label for="verify_status_{{ candidate.id }}">Outcome</label>
+              <select id="verify_status_{{ candidate.id }}" name="verify_status">
+                <option value="verified_winning" {% if candidate.status == "verified_winning" %}selected{% endif %}>Brief prevailed — use as precedent</option>
+                <option value="verified_not_winning" {% if candidate.status == "verified_not_winning" %}selected{% endif %}>Brief did not prevail</option>
+                <option value="rejected" {% if candidate.status == "rejected" %}selected{% endif %}>Not actually a brief discussion (false positive)</option>
+              </select>
+
+              <label for="verify_brief_text_{{ candidate.id }}">Brief text (if it prevailed)</label>
+              <textarea id="verify_brief_text_{{ candidate.id }}" name="verify_brief_text" rows="4" placeholder="Paste the full brief text here so it can be compared against future drafts.">{{ candidate.brief_text or "" }}</textarea>
+
+              <label for="verify_notes_{{ candidate.id }}">Notes (optional)</label>
+              <input id="verify_notes_{{ candidate.id }}" name="verify_notes" type="text" value="{{ candidate.notes }}">
+
+              <div class="actions">
+                <button type="submit" class="secondary-button">Save verification</button>
+              </div>
+            </form>
+          </details>
+
+          <details class="brief-candidate-auto-verify">
+            <summary>Auto-Research (billed per verification)</summary>
+            {% if auto_research_available %}
+              <form method="post" action="{{ url_for('main.courtlistener_auto_verify', candidate_id=candidate.id) }}">
+                <p class="slider-hint">Claude reads this case's synced opinion, determines which side prevailed, and — only if that side won — searches for and attaches the real brief text. Same research a human would do by hand, run automatically. Each click calls the Anthropic API directly with its own key and costs real money, separate from your Cowork/chat access.</p>
+
+                <div class="weight-slider-row">
+                  <div class="weight-slider-header">
+                    <label for="loop_limit_{{ candidate.id }}">Loop limiter</label>
+                    <span class="slider-value loop-limit-label">{{ default_loop_limit }} steps</span>
+                  </div>
+                  <input
+                    id="loop_limit_{{ candidate.id }}"
+                    name="loop_limit"
+                    type="range"
+                    min="3"
+                    max="20"
+                    step="1"
+                    value="{{ default_loop_limit }}"
+                    class="loop-limit-slider"
+                  >
+                  <p class="slider-hint">Caps how many research steps one run can take before it gives up and reports "inconclusive" instead of continuing indefinitely. You'll typically only notice this if a run actually hits it — shown live as "Step X of Y" while it's running, and flagged in the result. It's a safety backstop; the price limiter below usually stops a run first.</p>
+                </div>
+
+                <div class="weight-slider-row">
+                  <div class="weight-slider-header">
+                    <label for="cost_limit_{{ candidate.id }}">Price limiter</label>
+                    <span class="slider-value cost-limit-label">${{ "%.2f"|format(default_cost_limit_usd) }}</span>
+                  </div>
+                  <input
+                    id="cost_limit_{{ candidate.id }}"
+                    name="cost_limit_usd"
+                    type="range"
+                    min="0.25"
+                    max="2.00"
+                    step="0.25"
+                    value="{{ default_cost_limit_usd }}"
+                    class="cost-limit-slider"
+                  >
+                  <p class="slider-hint">A "verification" is one flagged case getting researched this way. This is the hard ceiling on estimated spend for that one case — if the running cost would cross it, the run stops early and reports what it found so far instead of ever going over.</p>
+                </div>
+
+                <div class="actions">
+                  <button type="submit" class="secondary-button">Run Auto-Research</button>
+                </div>
+              </form>
+            {% else %}
+              <p>Set <code>ANTHROPIC_API_KEY</code> in <code>.env</code> to turn this on. Until then, use "Verify this case" above to record outcomes yourself, or ask Claude in chat to research it — free of any per-run API cost to BriefTune.</p>
+            {% endif %}
+          </details>
+        </div>
+      {% endfor %}
+    </section>
+  {% endif %}
+
   <script>
-    ["weight_vocabulary", "weight_framing", "weight_brief_refs"].forEach(function(id) {
-      var input = document.getElementById(id);
-      var label = document.getElementById(id + "_label");
+    (function () {
+      var judgeStyleInput = document.getElementById("weight_judge_style");
+      var precedentInput = document.getElementById("weight_precedent_brief");
+      var judgeStyleLabel = document.getElementById("weight_judge_style_label");
+      var precedentLabel = document.getElementById("weight_precedent_brief_label");
+
+      function syncPair(changed, other, changedLabel, otherLabel) {
+        var value = parseInt(changed.value, 10);
+        var remainder = 100 - value;
+        other.value = remainder;
+        changedLabel.textContent = value + "%";
+        otherLabel.textContent = remainder + "%";
+      }
+
+      judgeStyleInput.addEventListener("input", function () {
+        syncPair(judgeStyleInput, precedentInput, judgeStyleLabel, precedentLabel);
+      });
+      precedentInput.addEventListener("input", function () {
+        syncPair(precedentInput, judgeStyleInput, precedentLabel, judgeStyleLabel);
+      });
+    })();
+
+    (function () {
+      var draftFileInput = document.getElementById("draft_file");
+      var draftFilenameDisplay = document.getElementById("draft-filename-display");
+
+      draftFileInput.addEventListener("change", function () {
+        if (draftFileInput.files && draftFileInput.files.length) {
+          draftFilenameDisplay.textContent = draftFileInput.files[0].name;
+        } else {
+          draftFilenameDisplay.textContent = "";
+        }
+      });
+    })();
+
+    document.querySelectorAll(".loop-limit-slider").forEach(function(input) {
+      var label = input.parentElement.querySelector(".loop-limit-label");
       input.addEventListener("input", function() {
-        label.textContent = input.value + "%";
+        label.textContent = input.value + " steps";
+      });
+    });
+
+    document.querySelectorAll(".cost-limit-slider").forEach(function(input) {
+      var label = input.parentElement.querySelector(".cost-limit-label");
+      input.addEventListener("input", function() {
+        label.textContent = "$" + parseFloat(input.value).toFixed(2);
       });
     });
   </script>
 
   <section class="helper-panel">
     <h2>How it works</h2>
-    <p>Start with judicial opinions to see the workflow, then add appellate oral argument transcripts or firm-supplied documents as additional sources. Firm documents are processed locally, anonymized before analysis, and never used as raw identifying text. Later, add `.txt` or PDF files to <code>data/opinions/</code> or <code>data/transcripts/</code>, or upload one-off files in either format. PDFs are extracted to text automatically.</p>
+    <p>Upload your draft brief as a <code>.txt</code> or PDF file. It's processed locally and anonymized before analysis — any names or other identifying details you list are redacted, and Social Security numbers, phone numbers, and email addresses are always redacted automatically. Case numbers and dollar figures are left visible. From there, optionally compare it against a tracked judge's opinions and verified winning briefs, and/or your firm's own folder of winning briefs, using the weighting sliders to control how much each comparison counts.</p>
   </section>
 {% endblock %}

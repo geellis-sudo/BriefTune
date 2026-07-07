@@ -107,26 +107,6 @@ BRIEF_REFERENCE_VERBS = [
     r"said",
 ]
 
-OPINION_STYLE_TERMS = [
-    "court",
-    "record",
-    "foregoing",
-    "conclude",
-    "concludes",
-    "hold",
-    "holds",
-    "grant",
-    "grants",
-    "deny",
-    "denies",
-    "because",
-    "therefore",
-    "reasoning",
-    "majority",
-    "opinion",
-    "argument",
-]
-
 FRAMING_PATTERNS = [
     r"\bthe court\b",
     r"\bwe conclude\b",
@@ -182,13 +162,25 @@ BURIED_CITATION_PATTERNS = [
 
 QUOTE_PATTERN = re.compile(r"[\"“](.+?)[\"”]")
 
+# Caps for the two judge-specific signals (style_profile.py / brief_candidates.py).
+# Duplicated here rather than imported to avoid a circular import: those modules
+# import shared helpers (words_in, split_sentences, FRAMING_PATTERNS,
+# extract_brief_language_references) from this one.
+MAX_JUDGE_STYLE_BONUS = 20
+MAX_PRECEDENT_BONUS = 25
+
 
 def analyze_text(
     text: str,
     source_type: str = "opinion",
-    weight_vocabulary: float = 1.0,
-    weight_framing: float = 1.0,
-    weight_brief_refs: float = 1.0,
+    judge_style_raw_bonus: int = 0,
+    judge_style_factors: list[str] | None = None,
+    weight_judge_style: float = 1.0,
+    judge_style_source_available: bool = True,
+    precedent_raw_bonus: int = 0,
+    precedent_factors: list[str] | None = None,
+    weight_precedent_brief: float = 1.0,
+    precedent_source_available: bool = True,
 ) -> dict:
     cleaned_text = text.strip()
     sentences = split_sentences(cleaned_text)
@@ -285,9 +277,14 @@ def analyze_text(
         weighted_issue_total,
         len(brief_language_references),
         source_type,
-        weight_vocabulary=weight_vocabulary,
-        weight_framing=weight_framing,
-        weight_brief_refs=weight_brief_refs,
+        judge_style_raw_bonus=judge_style_raw_bonus,
+        judge_style_factors=judge_style_factors,
+        weight_judge_style=weight_judge_style,
+        judge_style_source_available=judge_style_source_available,
+        precedent_raw_bonus=precedent_raw_bonus,
+        precedent_factors=precedent_factors,
+        weight_precedent_brief=weight_precedent_brief,
+        precedent_source_available=precedent_source_available,
     )
     writing_quality = build_writing_quality_summary(cleaned_text, writing_quality_flags)
 
@@ -591,46 +588,19 @@ def build_summary(
     weighted_issue_total: int,
     brief_reference_count: int,
     source_type: str,
-    weight_vocabulary: float = 1.0,
-    weight_framing: float = 1.0,
-    weight_brief_refs: float = 1.0,
+    judge_style_raw_bonus: int = 0,
+    judge_style_factors: list[str] | None = None,
+    weight_judge_style: float = 1.0,
+    judge_style_source_available: bool = True,
+    precedent_raw_bonus: int = 0,
+    precedent_factors: list[str] | None = None,
+    weight_precedent_brief: float = 1.0,
+    precedent_source_available: bool = True,
 ) -> AnalysisSummary:
     affinity_score = 50
     factors: list[str] = []
 
     average_sentence_length = word_count / sentence_count if sentence_count else 0
-
-    vocabulary_hits, vocabulary_examples = count_matches(text, OPINION_STYLE_TERMS)
-    vocabulary_bonus = min(18, int(vocabulary_hits * 3 * weight_vocabulary))
-    if vocabulary_bonus:
-        affinity_score += vocabulary_bonus
-        factors.append(
-            f"Uses opinion-style vocabulary such as {format_examples(vocabulary_examples)}."
-        )
-    else:
-        affinity_score -= 6
-        factors.append("Uses few opinion-style terms, so the style signal is lighter.")
-
-    framing_hits, framing_examples = count_regex_matches(text, FRAMING_PATTERNS)
-    framing_bonus = min(18, int(framing_hits * 4 * weight_framing))
-    if framing_bonus:
-        affinity_score += framing_bonus
-        factors.append(
-            f"Frames the issues in a way that resembles majority-opinion reasoning, especially around {format_examples(framing_examples)}."
-        )
-    else:
-        affinity_score -= 4
-        factors.append("Shows little majority-opinion framing, so the alignment signal is thinner.")
-
-    if brief_reference_count:
-        brief_bonus = min(28, int(brief_reference_count * 18 * weight_brief_refs))
-        affinity_score += brief_bonus
-        factors.append(
-            f"Quotes or references {brief_reference_count} brief-linked passage(s), which strongly boosts affinity when the judge echoes that language."
-        )
-    else:
-        affinity_score -= 8
-        factors.append("No brief-linked quotations or references were detected, so that signal is missing.")
 
     transcript_bonus = 0
     if source_type == "transcript":
@@ -664,6 +634,32 @@ def build_summary(
         affinity_score -= 6
         factors.append("A few drafting issues still pull the style signal down.")
 
+    # The two weight sliders are a linked pair that sums to 1.0 (100%) in the UI.
+    # If one signal has nothing to measure (no synced judge style profile, no
+    # verified winning briefs, no firm-folder text), its share of that 100% isn't
+    # spent -- it's handed entirely to the other, still-active signal instead of
+    # being wasted.
+    effective_weight_judge_style = weight_judge_style
+    effective_weight_precedent_brief = weight_precedent_brief
+    if judge_style_source_available and not precedent_source_available:
+        effective_weight_judge_style = weight_judge_style + weight_precedent_brief
+        effective_weight_precedent_brief = 0.0
+    elif precedent_source_available and not judge_style_source_available:
+        effective_weight_precedent_brief = weight_precedent_brief + weight_judge_style
+        effective_weight_judge_style = 0.0
+
+    if judge_style_raw_bonus:
+        judge_style_bonus = min(MAX_JUDGE_STYLE_BONUS, int(judge_style_raw_bonus * effective_weight_judge_style))
+        affinity_score += judge_style_bonus
+    if judge_style_factors:
+        factors.extend(judge_style_factors)
+
+    if precedent_raw_bonus:
+        precedent_bonus = min(MAX_PRECEDENT_BONUS, int(precedent_raw_bonus * effective_weight_precedent_brief))
+        affinity_score += precedent_bonus
+    if precedent_factors:
+        factors.extend(precedent_factors)
+
     affinity_score = max(0, min(100, affinity_score))
 
     if brief_reference_count:
@@ -674,11 +670,11 @@ def build_summary(
             explanation += " Transcript cues also contribute to the score because they reveal oral-argument style preferences."
     elif source_type == "transcript":
         explanation = (
-            "The score is driven mainly by oral-argument transcript cues, opinion-style vocabulary, and framing choices that hint at how the judge prefers issues to be presented."
+            "The score is driven mainly by oral-argument transcript cues and sentence cadence that hint at how the judge prefers issues to be presented."
         )
     else:
         explanation = (
-            "The score is driven mainly by opinion-style vocabulary, issue framing, and sentence cadence, with no brief-linked quotations found to push it higher."
+            "The score is driven mainly by sentence cadence, with no brief-linked quotations found to push it higher."
         )
 
     return AnalysisSummary(

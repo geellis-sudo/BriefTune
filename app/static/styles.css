@@ -17,7 +17,7 @@
 
 body {
   margin: 0;
-  font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
   color: var(--ink);
   background:
     radial-gradient(circle at top left, rgba(255, 255, 255, 0.8), transparent 35%),
@@ -27,9 +27,103 @@ body {
 
 a {
   color: var(--accent-strong);
+  transition: color 0.15s ease;
+}
+
+a:hover {
+  color: var(--accent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: 2px;
+}
+
+/* Outer "legal scroll" frame: a parchment mat around the whole page, bordered
+   on all four sides by a tiled strip of manuscript-staff lines with a music
+   note riding on them, and a wooden scroll-rod finial in each corner. */
+.scroll-frame {
+  position: relative;
+  min-height: 100vh;
+  padding: 34px 30px;
+  background: linear-gradient(180deg, #f6ecd4, #e7d3a4);
+}
+
+.scroll-frame-edge {
+  position: absolute;
+  z-index: 1;
+  box-shadow: 0 0 0 1px rgba(111, 56, 28, 0.28) inset;
+}
+
+.scroll-frame-edge--top,
+.scroll-frame-edge--bottom {
+  left: 30px;
+  right: 30px;
+  height: 30px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64'><rect width='64' height='64' fill='%23ecdfc2'/><line x1='0' y1='24' x2='64' y2='24' stroke='%236f381c' stroke-width='1.2' opacity='0.55'/><line x1='0' y1='40' x2='64' y2='40' stroke='%236f381c' stroke-width='1.2' opacity='0.55'/><text x='32' y='41' font-size='26' font-family='Georgia, serif' text-anchor='middle' fill='%236f381c'>%E2%99%AA</text></svg>");
+  background-repeat: repeat-x;
+  background-size: 32px 30px;
+}
+
+.scroll-frame-edge--top {
+  top: 0;
+}
+
+.scroll-frame-edge--bottom {
+  bottom: 0;
+}
+
+.scroll-frame-edge--left,
+.scroll-frame-edge--right {
+  top: 30px;
+  bottom: 30px;
+  width: 30px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64'><rect width='64' height='64' fill='%23ecdfc2'/><line x1='24' y1='0' x2='24' y2='64' stroke='%236f381c' stroke-width='1.2' opacity='0.55'/><line x1='40' y1='0' x2='40' y2='64' stroke='%236f381c' stroke-width='1.2' opacity='0.55'/><text x='32' y='41' font-size='26' font-family='Georgia, serif' text-anchor='middle' fill='%236f381c'>%E2%99%AA</text></svg>");
+  background-repeat: repeat-y;
+  background-size: 30px 32px;
+}
+
+.scroll-frame-edge--left {
+  left: 0;
+}
+
+.scroll-frame-edge--right {
+  right: 0;
+}
+
+.scroll-frame-cap {
+  position: absolute;
+  z-index: 2;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #b47b3c, var(--accent-strong) 72%);
+  box-shadow: 0 3px 8px rgba(35, 20, 10, 0.35), inset 0 0 0 2px rgba(255, 245, 225, 0.3);
+}
+
+.scroll-frame-cap--tl {
+  top: 6px;
+  left: 6px;
+}
+
+.scroll-frame-cap--tr {
+  top: 6px;
+  right: 6px;
+}
+
+.scroll-frame-cap--bl {
+  bottom: 6px;
+  left: 6px;
+}
+
+.scroll-frame-cap--br {
+  bottom: 6px;
+  right: 6px;
 }
 
 .page-shell {
+  position: relative;
+  z-index: 0;
   width: min(980px, calc(100% - 2rem));
   margin: 0 auto;
   padding: 2rem 0 3rem;
@@ -83,7 +177,120 @@ h1 {
 }
 
 .secondary-button {
-  background: linear-gradient(180deg, #396c5a, #245146);
+  background: linear-gradient(180deg, #2f333a, var(--ink));
+}
+
+.tracked-judges-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.6rem 0 1rem;
+}
+
+.tracked-judges-table th,
+.tracked-judges-table td {
+  text-align: left;
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid var(--card-border);
+  font-size: 0.92rem;
+}
+
+.tracked-judges-table th {
+  font-size: 1.05rem;
+}
+
+.tracked-judges-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.link-button {
+  background: none;
+  border: none;
+  color: var(--accent-strong);
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+}
+
+.link-button:hover {
+  text-decoration: underline;
+}
+
+.brief-candidate-card {
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  padding: 0.9rem 1.1rem;
+  margin-bottom: 0.8rem;
+  background: #fffaf3;
+}
+
+.brief-candidate-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.brief-candidate-status {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: var(--bg-accent);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.brief-candidate-status--verified_winning {
+  background: #dff3e6;
+  color: #1f6b3f;
+}
+
+.brief-candidate-status--verified_not_winning {
+  background: #f3e6df;
+  color: #8a4a2b;
+}
+
+.brief-candidate-status--rejected {
+  background: #f0e3e3;
+  color: #8a2b2b;
+}
+
+.brief-candidate-meta {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: 0.2rem 0 0.4rem;
+}
+
+.brief-candidate-excerpt {
+  font-style: italic;
+  color: var(--ink);
+  margin: 0 0 0.5rem;
+}
+
+.brief-candidate-verify summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--accent-strong);
+}
+
+.brief-candidate-auto-verify {
+  margin-top: 0.5rem;
+}
+
+.brief-candidate-auto-verify summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: #8a4a2b;
+}
+
+.brief-candidate-auto-verify form {
+  display: grid;
+  gap: 0.9rem;
+  margin-top: 0.6rem;
 }
 
 .disclosure-banner {
@@ -91,9 +298,9 @@ h1 {
   gap: 0.35rem;
   padding: 1rem 1.1rem;
   border-radius: 18px;
-  border: 1px solid #d1dbe7;
-  background: linear-gradient(180deg, #f7fbff, #eef5ff);
-  color: #21406f;
+  border: 1px solid var(--card-border);
+  background: linear-gradient(180deg, #fffaf3, var(--bg-accent));
+  color: var(--accent-strong);
 }
 
 .disclosure-banner strong {
@@ -101,7 +308,7 @@ h1 {
 }
 
 .disclosure-banner span {
-  color: #446289;
+  color: var(--muted);
   line-height: 1.5;
 }
 
@@ -115,32 +322,55 @@ h1 {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 250, 243, 0.94));
 }
 
-.sample-picker--opinion {
-  border-left: 6px solid var(--accent);
-}
-
-.sample-picker--transcript {
-  border-left: 6px solid #396c5a;
-  background: linear-gradient(180deg, rgba(245, 255, 251, 0.95), rgba(236, 248, 243, 0.98));
-}
-
 .sample-picker--folder {
   border-left: 6px solid #8b4d2b;
   background: linear-gradient(180deg, rgba(255, 250, 243, 0.98), rgba(250, 241, 231, 0.98));
 }
 
-.sample-picker--transcript .eyebrow {
-  color: #396c5a;
+.sample-picker--draft {
+  border-left: 6px solid var(--accent-strong);
 }
 
-.sample-picker--transcript .sample-card {
-  background: linear-gradient(180deg, #f9fffd, #eef8f4);
-  border-color: #cfe2db;
+.draft-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
-.sample-picker--transcript .sample-card:has(.sample-radio:checked) {
-  border-color: #396c5a;
-  box-shadow: 0 12px 32px rgba(57, 108, 90, 0.16);
+.draft-upload-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--accent), var(--accent-strong));
+  color: white;
+  padding: 0.9rem 1.6rem;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: filter 0.15s ease, transform 0.1s ease;
+}
+
+.draft-upload-button:hover {
+  filter: brightness(1.04);
+}
+
+.draft-upload-button:active {
+  transform: scale(0.98);
+}
+
+.draft-filename {
+  margin-left: 0.75rem;
+  font-weight: 700;
+  color: var(--muted);
 }
 
 .section-heading {
@@ -150,10 +380,16 @@ h1 {
   align-items: end;
 }
 
-.section-heading p {
+.section-heading p,
+.section-heading .section-description {
   margin: 0;
   color: var(--muted);
   max-width: 48ch;
+}
+
+.sample-picker--courtlistener h2 {
+  font-size: 2.1rem;
+  font-weight: 700;
 }
 
 .sample-grid {
@@ -171,6 +407,11 @@ h1 {
   background: linear-gradient(180deg, #fffdf9, #fff7ee);
   cursor: pointer;
   box-shadow: 0 10px 28px rgba(55, 41, 27, 0.06);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.sample-card:hover {
+  border-color: var(--accent);
 }
 
 .sample-card:has(.sample-radio:checked) {
@@ -207,6 +448,20 @@ label {
   font-weight: 700;
 }
 
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 1.1rem;
+  height: 1.1rem;
+  cursor: pointer;
+}
+
 select,
 textarea,
 button {
@@ -234,6 +489,27 @@ textarea {
   justify-content: flex-end;
 }
 
+.actions--run {
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px dashed var(--card-border);
+}
+
+.actions--run button {
+  width: 100%;
+  max-width: 360px;
+  padding: 1.1rem 1.4rem;
+  font-size: 1.05rem;
+}
+
+.actions--run .slider-hint {
+  text-align: center;
+  max-width: 42ch;
+}
+
 button {
   border: 0;
   border-radius: 999px;
@@ -242,10 +518,19 @@ button {
   padding: 0.85rem 1.2rem;
   font-weight: 700;
   cursor: pointer;
+  transition: filter 0.15s ease, transform 0.1s ease;
 }
 
 button:hover {
   filter: brightness(1.04);
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+.link-button:active {
+  transform: none;
 }
 
 .helper-panel,
@@ -334,7 +619,7 @@ button:hover {
 .progress-bar {
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, #396c5a, #8b4d2b);
+  background: linear-gradient(90deg, var(--accent-strong), var(--accent));
 }
 
 .progress-meta {
@@ -375,8 +660,8 @@ button:hover {
 }
 
 .quality-block {
-  border-left: 6px solid #2b5aa8;
-  background: linear-gradient(180deg, #f7fbff, #eef4ff);
+  border-left: 6px solid var(--ink);
+  background: linear-gradient(180deg, #ffffff, #f7f6f2);
 }
 
 .quality-header {
@@ -388,7 +673,7 @@ button:hover {
 }
 
 .quality-eyebrow {
-  color: #2b5aa8;
+  color: var(--ink);
 }
 
 .quality-score-pill {
@@ -396,12 +681,12 @@ button:hover {
   padding: 0.8rem 1rem;
   border-radius: 16px;
   background: #ffffff;
-  border: 1px solid #bfd0f5;
-  color: #20427e;
+  border: 1px solid var(--card-border);
+  color: var(--ink);
   font-weight: 800;
   font-size: 1.15rem;
   text-align: center;
-  box-shadow: 0 10px 24px rgba(43, 90, 168, 0.08);
+  box-shadow: 0 10px 24px rgba(31, 35, 40, 0.08);
 }
 
 .quality-subheading {
@@ -417,12 +702,12 @@ code {
 }
 
 .sample-picker--weights {
-  border-left: 6px solid #5a3ea8;
-  background: linear-gradient(180deg, rgba(248, 246, 255, 0.98), rgba(238, 233, 255, 0.98));
+  border-left: 6px solid var(--accent-strong);
+  background: linear-gradient(180deg, rgba(255, 250, 243, 0.98), rgba(250, 241, 231, 0.98));
 }
 
-.sample-picker--weights .eyebrow {
-  color: #5a3ea8;
+.affinity-score-heading {
+  color: #000;
 }
 
 .weight-sliders {
@@ -444,8 +729,8 @@ code {
 .slider-value {
   font-size: 0.9rem;
   font-weight: 700;
-  color: #5a3ea8;
-  background: rgba(90, 62, 168, 0.1);
+  color: var(--accent-strong);
+  background: rgba(139, 77, 43, 0.1);
   padding: 0.15rem 0.55rem;
   border-radius: 999px;
   min-width: 4ch;
@@ -454,7 +739,7 @@ code {
 
 input[type="range"] {
   width: 100%;
-  accent-color: #5a3ea8;
+  accent-color: var(--accent-strong);
   cursor: pointer;
   height: 6px;
 }
@@ -463,6 +748,117 @@ input[type="range"] {
   margin: 0;
   font-size: 0.83rem;
   color: var(--muted);
+}
+
+/* Reusable "hover for a preview, click for the full note" component -- first
+   built for the Affinity Score weighting explanation, now shared by any
+   other spot on the page that wants a short label plus an optional deeper
+   explanation without cluttering the visible copy. */
+.info-note {
+  display: inline-block;
+  vertical-align: middle;
+  align-self: start;
+}
+
+.info-note summary {
+  position: relative;
+  list-style: none;
+  cursor: pointer;
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent-strong);
+  background: rgba(139, 77, 43, 0.1);
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  transition: background-color 0.15s ease;
+}
+
+.info-note summary::-webkit-details-marker {
+  display: none;
+}
+
+.info-note summary::marker {
+  content: "";
+}
+
+.info-note summary:hover {
+  background: rgba(139, 77, 43, 0.2);
+}
+
+/* Hover preview: a partial-text tooltip that appears before the user commits
+   to clicking to open the full note. Suppressed once the note is already
+   open, since the full text is visible right below at that point. */
+.info-note summary::after {
+  content: attr(data-preview);
+  position: absolute;
+  left: 0;
+  top: 135%;
+  z-index: 5;
+  width: max-content;
+  max-width: 22rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  background: var(--ink);
+  color: #f8f5ef;
+  font-size: 0.78rem;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  line-height: 1.45;
+  box-shadow: 0 10px 28px rgba(24, 16, 46, 0.25);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+}
+
+.info-note summary:hover::after {
+  opacity: 1;
+}
+
+.info-note[open] summary::after {
+  display: none;
+}
+
+.info-note[open] summary {
+  background: var(--accent-strong);
+  color: #fff;
+}
+
+.info-note p {
+  margin: 0.5rem 0 0;
+  padding: 0.75rem 0.9rem;
+  max-width: 32ch;
+  font-size: 0.83rem;
+  line-height: 1.45;
+  color: var(--muted);
+  background: rgba(139, 77, 43, 0.06);
+  border: 1px solid rgba(139, 77, 43, 0.2);
+  border-radius: 12px;
+}
+
+.comparison-toggle {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0.8rem 0;
+}
+
+.comparison-toggle-btn {
+  background: #fff;
+  color: var(--muted);
+  border: 1px solid var(--card-border);
+  border-radius: 999px;
+  padding: 0.5rem 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.comparison-toggle-btn.active {
+  background: linear-gradient(180deg, var(--accent), var(--accent-strong));
+  color: white;
+  border-color: transparent;
 }
 
 @media (max-width: 720px) {

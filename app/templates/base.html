@@ -7,28 +7,39 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
   </head>
   <body>
-    <div class="page-shell">
-      <header class="hero">
-        <h1>BriefTune</h1>
-        <p class="lede">Use judicial opinions, oral argument transcripts, references to briefs in opinions or other sources you identify to anticipate how the language in your draft brief is likely to be received by a judge you identify.</p>
-      </header>
+    <div class="scroll-frame">
+      <div class="scroll-frame-edge scroll-frame-edge--top"></div>
+      <div class="scroll-frame-edge scroll-frame-edge--bottom"></div>
+      <div class="scroll-frame-edge scroll-frame-edge--left"></div>
+      <div class="scroll-frame-edge scroll-frame-edge--right"></div>
+      <div class="scroll-frame-cap scroll-frame-cap--tl"></div>
+      <div class="scroll-frame-cap scroll-frame-cap--tr"></div>
+      <div class="scroll-frame-cap scroll-frame-cap--bl"></div>
+      <div class="scroll-frame-cap scroll-frame-cap--br"></div>
 
-      <main class="content-card">
-        {% with messages = get_flashed_messages() %}
-          {% if messages %}
-            <div class="flash-stack">
-              {% for message in messages %}
-                <div class="flash-message">{{ message }}</div>
-              {% endfor %}
-            </div>
-          {% endif %}
-        {% endwith %}
-        {% block content %}{% endblock %}
-      </main>
+      <div class="page-shell">
+        <header class="hero">
+          <h1>BriefTune</h1>
+          <p class="lede">Tune your brief to the stylistic preferences of the judge (or panel) to which your appeal has been assigned.</p>
+        </header>
 
-      <footer class="page-footer">
-        BriefTune © 2026 George Ellis. All rights reserved.
-      </footer>
+        <main class="content-card">
+          {% with messages = get_flashed_messages() %}
+            {% if messages %}
+              <div class="flash-stack">
+                {% for message in messages %}
+                  <div class="flash-message">{{ message }}</div>
+                {% endfor %}
+              </div>
+            {% endif %}
+          {% endwith %}
+          {% block content %}{% endblock %}
+        </main>
+
+        <footer class="page-footer">
+          BriefTune © 2026 George Ellis. All rights reserved.
+        </footer>
+      </div>
     </div>
   </body>
 </html>

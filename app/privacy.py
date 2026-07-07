@@ -12,66 +12,9 @@ from typing import Any
 from cryptography.fernet import Fernet
 
 
-AMOUNT_PATTERN = re.compile(r"\$\s?\d{1,3}(?:,\d{3})*(?:\.\d{2})?")
-CASE_NUMBER_PATTERNS = [
-    re.compile(r"\b(?:case\s+no\.?|cause\s+no\.?|docket\s+no\.?|no\.?|dkt\.?|file\s+no\.?)\s*[:#-]?\s*[A-Za-z0-9][A-Za-z0-9\-./]*", re.IGNORECASE),
-    re.compile(r"\b\d{2,4}[-–][A-Z]{1,4}[-–]\d{1,6}\b"),
-    re.compile(r"\b\d{1,6}[:/\-]\d{1,6}[:/\-]\d{1,6}\b"),
-]
-NAME_SEQUENCE_PATTERN = re.compile(r"\b(?:[A-Z][a-z]+(?:[-'][A-Z][a-z]+)?)(?:\s+(?:[A-Z][a-z]+(?:[-'][A-Z][a-z]+)?))+\b")
-HONORIFIC_NAME_PATTERN = re.compile(r"\b(?:Judge|Justice|Mr|Mrs|Ms|Dr)\.?\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b")
-SINGLE_NAME_PATTERN = re.compile(r"\b[A-Z][a-z]{2,}\b")
-UPPER_ACRONYM_PATTERN = re.compile(r"\b[A-Z]{2,}\b")
-
-PROPER_NOUN_KEEPERS = {
-    "The",
-    "A",
-    "An",
-    "This",
-    "That",
-    "These",
-    "Those",
-    "When",
-    "Where",
-    "While",
-    "Because",
-    "If",
-    "In",
-    "On",
-    "At",
-    "After",
-    "Before",
-    "As",
-    "By",
-    "For",
-    "From",
-    "To",
-    "And",
-    "But",
-    "Or",
-    "Nor",
-    "Yet",
-    "So",
-    "Court",
-    "Judge",
-    "Justice",
-    "Opinion",
-    "Record",
-    "Brief",
-    "Motion",
-    "Order",
-    "Counsel",
-    "Plaintiff",
-    "Defendant",
-    "Appellant",
-    "Appellee",
-    "Petitioner",
-    "Respondent",
-    "United",
-    "States",
-    "State",
-    "Federal",
-}
+SSN_PATTERN = re.compile(r"\b\d{3}-\d{2}-\d{4}\b")
+PHONE_PATTERN = re.compile(r"(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b")
+EMAIL_PATTERN = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")
 
 
 @dataclass(frozen=True)
@@ -93,46 +36,47 @@ def ensure_privacy_storage(config: dict[str, Any]) -> None:
     key_path.parent.mkdir(parents=True, exist_ok=True)
 
 
-def anonymize_firm_text(text: str) -> str:
+def anonymize_firm_text(text: str, manual_terms: list[str] | None = None) -> str:
+    """Redact client-supplied terms plus structured PII (SSN/phone/email).
+
+    This is a targeted redaction, not a blanket proper-noun stripper: only
+    terms explicitly listed by the caller (e.g. the client's name and any
+    aliases, typed into the "Names or info to redact" field) get redacted
+    as names. Case numbers and dollar figures are intentionally left
+    visible -- they're useful context for the analysis and aren't treated
+    as privileged on their own. Social Security numbers, phone numbers, and
+    email addresses are always redacted automatically, regardless of
+    whether they were listed, since those formats are reliably detectable
+    and essentially never appropriate to leave in.
+    """
     anonymized = text
-    anonymized = AMOUNT_PATTERN.sub("[AMOUNT]", anonymized)
 
-    for pattern in CASE_NUMBER_PATTERNS:
-        anonymized = pattern.sub("[CASE_NUMBER]", anonymized)
+    for term in _prepare_manual_terms(manual_terms or []):
+        pattern = re.compile(r"\b" + re.escape(term) + r"\b", re.IGNORECASE)
+        anonymized = pattern.sub("[REDACTED]", anonymized)
 
-    anonymized = HONORIFIC_NAME_PATTERN.sub("[PROPER_NOUN]", anonymized)
-    anonymized = NAME_SEQUENCE_PATTERN.sub("[PROPER_NOUN]", anonymized)
-    anonymized = anonymized.replace(" v. ", " [CITATION] ")
+    anonymized = SSN_PATTERN.sub("[SSN]", anonymized)
+    anonymized = PHONE_PATTERN.sub("[PHONE]", anonymized)
+    anonymized = EMAIL_PATTERN.sub("[EMAIL]", anonymized)
 
-    anonymized = replace_remaining_proper_nouns(anonymized)
     anonymized = re.sub(r"\s+", " ", anonymized).strip()
-
     return anonymized
 
 
-def replace_remaining_proper_nouns(text: str) -> str:
-    tokens = re.findall(r"\s+|\w+|[^\w\s]", text)
-    anonymized_tokens: list[str] = []
-
-    for token in tokens:
-        if token.isspace() or not token:
-            anonymized_tokens.append(token)
-            continue
-
-        if UPPER_ACRONYM_PATTERN.fullmatch(token):
-            anonymized_tokens.append(token)
-            continue
-
-        if SINGLE_NAME_PATTERN.fullmatch(token) and token not in PROPER_NOUN_KEEPERS:
-            anonymized_tokens.append("[PROPER_NOUN]")
-            continue
-
-        anonymized_tokens.append(token)
-
-    return "".join(anonymized_tokens)
+def _prepare_manual_terms(terms: list[str]) -> list[str]:
+    cleaned = [term.strip() for term in terms if term and term.strip()]
+    # Longest first so e.g. "John Smith" gets redacted whole before a
+    # separately-listed "Smith" would otherwise partially match inside it.
+    cleaned.sort(key=len, reverse=True)
+    return cleaned
 
 
-def store_firm_document(config: dict[str, Any], original_filename: str, raw_text: str) -> FirmDocumentArtifact:
+def store_firm_document(
+    config: dict[str, Any],
+    original_filename: str,
+    raw_text: str,
+    manual_terms: list[str] | None = None,
+) -> FirmDocumentArtifact:
     confidential_dir = Path(config["FIRM_CONFIDENTIAL_DIR"])
     confidential_dir.mkdir(parents=True, exist_ok=True)
 
@@ -142,7 +86,7 @@ def store_firm_document(config: dict[str, Any], original_filename: str, raw_text
     return FirmDocumentArtifact(
         original_filename=original_filename,
         encrypted_path=encrypted_path,
-        anonymized_text=anonymize_firm_text(raw_text),
+        anonymized_text=anonymize_firm_text(raw_text, manual_terms),
         upload_size=len(raw_text.encode("utf-8")),
     )
 

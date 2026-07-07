@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block title %}BriefTune{% endblock %}
+
+{% block content %}
+  {% if refresh_interval %}
+    <script>
+      window.setTimeout(function () {
+        window.location.reload();
+      }, {{ refresh_interval * 1000 }});
+    </script>
+  {% endif %}
+
+  <section class="results-block">
+    <h2>Auto-Research progress — {{ jobs|length }} case(s)</h2>
+
+    {% set done_count = jobs|selectattr("status", "in", ["done", "error"])|list|length %}
+    <p>{{ done_count }} of {{ jobs|length }} finished{% if refresh_interval %} &middot; this page refreshes automatically while any are still running{% endif %}.</p>
+
+    <table class="tracked-judges-table">
+      <thead>
+        <tr>
+          <th>Case</th>
+          <th>Status</th>
+          <th>Result</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for job in jobs %}
+          {% set candidate = candidates_by_id.get(job.candidate_id) %}
+          <tr>
+            <td>{{ candidate.case_name if candidate else job.candidate_id }}</td>
+            <td>
+              {% if job.status in ['queued', 'running'] %}
+                Step {{ job.steps_used }} of {{ job.loop_limit }} &middot; ${{ "%.2f"|format(job.cost_spent_usd) }} so far
+              {% elif job.status == 'error' %}
+                Error
+              {% else %}
+                Done &middot; {{ job.steps_used }} step(s) &middot; ${{ "%.2f"|format(job.cost_spent_usd) }}
+              {% endif %}
+            </td>
+            <td>
+              {% if job.status == 'error' %}
+                {{ job.error }}
+              {% elif job.status == 'done' %}
+                {% if job.outcome == 'prevailed' %}
+                  <strong>{{ job.prevailing_party or "Discussed party" }} prevailed</strong>
+                  {% if job.candidate_status_applied %} &mdash; recorded{% endif %}
+                {% elif job.outcome == 'did_not_prevail' %}
+                  {{ job.prevailing_party or "Discussed party" }} did not prevail
+                  {% if job.candidate_status_applied %} &mdash; recorded{% endif %}
+                {% else %}
+                  Inconclusive &mdash; left for manual review
+                {% endif %}
+              {% else %}
+                &mdash;
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <a class="secondary-link" href="{{ url_for('main.index') }}">Back to home</a>
+{% endblock %}
