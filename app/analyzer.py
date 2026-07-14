@@ -168,6 +168,7 @@ QUOTE_PATTERN = re.compile(r"[\"“](.+?)[\"”]")
 # extract_brief_language_references) from this one.
 MAX_JUDGE_STYLE_BONUS = 20
 MAX_PRECEDENT_BONUS = 25
+CORPUS_MATCH_MIN_TERMS = 3
 
 
 def analyze_text(
@@ -181,11 +182,28 @@ def analyze_text(
     precedent_factors: list[str] | None = None,
     weight_precedent_brief: float = 1.0,
     precedent_source_available: bool = True,
+    verified_brief_texts: list[str] | None = None,
+    folder_brief_texts: list[str] | None = None,
+    brief_language_source_description: str | None = None,
 ) -> dict:
     cleaned_text = text.strip()
     sentences = split_sentences(cleaned_text)
     issues: list[Issue] = []
-    brief_language_references = extract_brief_language_references(cleaned_text, source_type=source_type)
+    corpus_texts = [*(verified_brief_texts or []), *(folder_brief_texts or [])]
+    if brief_language_source_description:
+        brief_language_match_source = brief_language_source_description
+    elif verified_brief_texts and folder_brief_texts:
+        brief_language_match_source = "the configured winning-brief corpus"
+    elif verified_brief_texts:
+        brief_language_match_source = "briefs verified as winning"
+    else:
+        brief_language_match_source = "briefs in your firm's winning-briefs folder"
+    brief_language_references = find_corpus_matched_passages(
+        cleaned_text,
+        corpus_texts,
+        brief_language_match_source,
+        source_type=source_type,
+    )
     writing_quality_flags = collect_writing_quality_flags(cleaned_text, sentences)
     word_count = len(words_in(cleaned_text))
 
@@ -310,6 +328,20 @@ def words_in(text: str) -> list[str]:
     return re.findall(r"[A-Za-z']+", text)
 
 
+def distinctive_terms(texts: list[str], top_n: int = 40) -> list[tuple[str, int]]:
+    from .style_profile import MIN_WORD_LENGTH, STOPWORDS
+
+    counts: Counter[str] = Counter()
+    for text in texts:
+        words = [
+            word.lower()
+            for word in words_in(text)
+            if len(word) >= MIN_WORD_LENGTH and word.lower() not in STOPWORDS
+        ]
+        counts.update(words)
+    return counts.most_common(top_n)
+
+
 def looks_passive(sentence: str) -> bool:
     passive_patterns = [
         r"\b(?:was|were|is|are|been|be|being)\s+[A-Za-z]+ed\b",
@@ -380,6 +412,71 @@ def extract_brief_language_references(text: str, source_type: str = "opinion") -
                 seen_passages.add(normalized_excerpt)
 
     return references
+
+
+def find_corpus_matched_passages(
+    text: str,
+    corpus_texts: list[str],
+    source_description: str,
+    source_type: str = "opinion",
+) -> list[BriefLanguageReference]:
+    cleaned_corpus_texts = [corpus_text for corpus_text in corpus_texts if corpus_text and corpus_text.strip()]
+    if not cleaned_corpus_texts:
+        return []
+
+    terms = distinctive_terms(cleaned_corpus_texts)
+    if not terms:
+        return []
+
+    ranked_terms = [term for term, _count in terms]
+    references: list[BriefLanguageReference] = []
+    seen_passages: set[str] = set()
+
+    for sentence in split_sentences(text):
+        normalized_sentence = sentence.strip()
+        if not normalized_sentence:
+            continue
+
+        words_lower = {word.lower() for word in words_in(normalized_sentence)}
+        matched_terms = [term for term in ranked_terms if term in words_lower]
+        if len(matched_terms) < CORPUS_MATCH_MIN_TERMS:
+            continue
+
+        passage = _best_corpus_matched_passage(normalized_sentence, matched_terms)
+        normalized_passage = normalize_excerpt(passage)
+        if not normalized_passage or normalized_passage in seen_passages:
+            continue
+
+        examples = ", ".join(matched_terms[:5])
+        references.append(
+            BriefLanguageReference(
+                passage=normalized_passage,
+                signal=(
+                    f"Shares vocabulary with {source_description}, including {examples}."
+                ),
+                source_sentence=normalized_sentence,
+                source_type=source_type,
+            )
+        )
+        seen_passages.add(normalized_passage)
+
+    return references
+
+
+def _best_corpus_matched_passage(sentence: str, matched_terms: list[str]) -> str:
+    best_quote = ""
+    best_quote_match_count = 0
+
+    for quote in [match.strip() for match in QUOTE_PATTERN.findall(sentence)]:
+        quote_words = {word.lower() for word in words_in(quote)}
+        quote_match_count = sum(1 for term in matched_terms if term in quote_words)
+        if quote_match_count > best_quote_match_count:
+            best_quote = quote
+            best_quote_match_count = quote_match_count
+
+    if best_quote and best_quote_match_count >= CORPUS_MATCH_MIN_TERMS:
+        return best_quote
+    return sentence
 
 
 def normalize_excerpt(text: str) -> str:

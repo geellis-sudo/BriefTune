@@ -390,6 +390,7 @@ def analyze():
     precedent_raw_bonus = 0
     precedent_factors: list[str] = []
     precedent_source_available = False
+    verified_texts: list[str] = []
 
     if compare_judge_id:
         tracked_judge = get_tracked_judge(current_app.config, compare_judge_id)
@@ -410,6 +411,7 @@ def analyze():
     folder_precedent_factors: list[str] = []
     folder_precedent_source_available = False
     folder_used = False
+    folder_texts: list[str] = []
 
     if firm_folder_path:
         folder_used = True
@@ -446,6 +448,9 @@ def analyze():
         precedent_bonus: int,
         precedent_factors_: list[str],
         precedent_available: bool,
+        verified_texts_: list[str] | None = None,
+        folder_texts_: list[str] | None = None,
+        brief_language_source_description: str | None = None,
     ) -> dict:
         return analyze_text(
             text,
@@ -458,24 +463,37 @@ def analyze():
             precedent_factors=precedent_factors_,
             weight_precedent_brief=weight_precedent_brief,
             precedent_source_available=precedent_available,
+            verified_brief_texts=verified_texts_,
+            folder_brief_texts=folder_texts_,
+            brief_language_source_description=brief_language_source_description,
         )
 
     both_active = bool(compare_judge_name) and folder_used
     result = _run_analysis(
         judge_style_raw_bonus, judge_style_factors, judge_style_source_available,
         precedent_raw_bonus, precedent_factors, precedent_source_available,
+        verified_texts_=verified_texts,
+        brief_language_source_description=(
+            f"briefs verified as winning before {compare_judge_name}"
+            if compare_judge_name
+            else None
+        ),
     )
     secondary_result = None
     if both_active:
         secondary_result = _run_analysis(
             folder_style_raw_bonus, folder_style_factors, folder_style_source_available,
             folder_precedent_raw_bonus, folder_precedent_factors, folder_precedent_source_available,
+            folder_texts_=folder_texts,
+            brief_language_source_description="briefs in your firm's winning-briefs folder",
         )
     elif folder_used and not compare_judge_name:
         # Folder was the only comparison source active -- it IS the primary result.
         result = _run_analysis(
             folder_style_raw_bonus, folder_style_factors, folder_style_source_available,
             folder_precedent_raw_bonus, folder_precedent_factors, folder_precedent_source_available,
+            folder_texts_=folder_texts,
+            brief_language_source_description="briefs in your firm's winning-briefs folder",
         )
 
     log_audit_event(

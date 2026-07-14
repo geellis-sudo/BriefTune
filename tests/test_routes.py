@@ -3,7 +3,7 @@ from io import BytesIO
 from unittest.mock import MagicMock, patch
 
 from app import create_app
-from app.brief_candidates import flag_brief_mentions, load_candidates
+from app.brief_candidates import flag_brief_mentions, load_candidates, verify_candidate
 from app.style_profile import build_style_profile, save_style_profile
 
 
@@ -70,7 +70,7 @@ def test_analyze_extracts_text_from_uploaded_pdf(tmp_path: Path):
     assert b"Robert T. Hill" in response.data
 
 
-def test_analyze_highlights_brief_language_passages(tmp_path: Path):
+def test_analyze_without_corpus_hides_brief_language_passages(tmp_path: Path):
     app = make_analyze_app(tmp_path)
 
     with app.test_client() as client:
@@ -88,10 +88,49 @@ def test_analyze_highlights_brief_language_passages(tmp_path: Path):
         )
 
     assert response.status_code == 200
-    assert b"Brief language passages" in response.data
-    assert b"The contract language was plain and unambiguous." in response.data
+    assert b"Brief language passages" not in response.data
     assert b"Affinity Score" in response.data
     assert b"Writing Quality" in response.data
+
+
+def test_analyze_with_verified_winning_brief_highlights_corpus_matched_passage(tmp_path: Path):
+    from app.courtlistener_sync import add_tracked_judge
+
+    app = make_analyze_app(tmp_path)
+    judge = add_tracked_judge(app.config, "Judge Test", "scotus")
+
+    opinion_text = (
+        'The appellee\'s brief argued, "The contract language was plain and unambiguous." '
+        "The court agreed with that phrasing."
+    )
+    flag_brief_mentions(app.config, judge.id, judge.name, 555, "Doe v. Roe", "2025-01-01", opinion_text)
+    candidate_id = load_candidates(app.config)[0].id
+    verify_candidate(
+        app.config,
+        candidate_id,
+        "verified_winning",
+        brief_text="The contract language was plain and unambiguous, and the agreement forecloses the defendant's reading.",
+    )
+
+    with app.test_client() as client:
+        response = client.post(
+            "/analyze",
+            data={
+                "draft_file": (
+                    BytesIO(
+                        b"Opinion by Judge Elena M. Torres\n\nThe appellee's brief argued, \"The contract language was plain and unambiguous.\" The court adopted that wording."
+                    ),
+                    "opinion.txt",
+                ),
+                "compare_judge_id": judge.id,
+            },
+            content_type="multipart/form-data",
+        )
+
+    assert response.status_code == 200
+    assert b"Brief language passages" in response.data
+    assert b"The contract language was plain and unambiguous." in response.data
+    assert b"verified as winning" in response.data
 
 
 def test_analyze_handles_draft_upload_with_anonymization_and_audit_log(tmp_path: Path):

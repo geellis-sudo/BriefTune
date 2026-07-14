@@ -30,7 +30,7 @@ def test_analyze_text_flags_repetition_and_jargon():
     assert "Dense legal wording" in categories
 
 
-def test_analyze_text_extracts_brief_language_passages_with_extra_weight():
+def test_analyze_text_does_not_flag_brief_language_without_winning_brief_corpus():
     text = (
         "The appellee's brief argued, \"The contract language was plain and unambiguous.\" "
         "The court agreed with that phrasing and repeated it in the opinion."
@@ -40,9 +40,31 @@ def test_analyze_text_extracts_brief_language_passages_with_extra_weight():
 
     categories = [issue.category for issue in result["issues"]]
 
+    assert "Brief language reference" not in categories
+    assert result["brief_language_references"] == []
+    assert 0 <= result["summary"].affinity_score <= 100
+    assert result["summary"].affinity_explanation
+
+
+def test_analyze_text_extracts_corpus_matched_brief_language_passages_with_extra_weight():
+    text = (
+        "The appellee's brief argued, \"The contract language was plain and unambiguous.\" "
+        "The court agreed with that phrasing and repeated it in the opinion."
+    )
+
+    result = analyze_text(
+        text,
+        verified_brief_texts=[
+            "The contract language was plain and unambiguous, and the agreement forecloses the defendant's reading."
+        ],
+    )
+
+    categories = [issue.category for issue in result["issues"]]
+
     assert "Brief language reference" in categories
     assert result["brief_language_references"]
     assert result["brief_language_references"][0].passage == "The contract language was plain and unambiguous."
+    assert "verified as winning" in result["brief_language_references"][0].signal
     assert 0 <= result["summary"].affinity_score <= 100
     assert result["summary"].affinity_explanation
 
@@ -53,7 +75,13 @@ def test_analyze_text_marks_transcript_sourced_brief_references():
         "The court then adopted that wording."
     )
 
-    result = analyze_text(text, source_type="transcript")
+    result = analyze_text(
+        text,
+        source_type="transcript",
+        verified_brief_texts=[
+            "The contract language was plain and unambiguous, and the agreement forecloses the defendant's reading."
+        ],
+    )
 
     reference_issues = [issue for issue in result["issues"] if issue.category == "Brief language reference"]
 

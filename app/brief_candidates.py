@@ -4,14 +4,12 @@ import json
 import os
 import threading
 import uuid
-from collections import Counter
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .analyzer import extract_brief_language_references, words_in
-from .style_profile import MIN_WORD_LENGTH, STOPWORDS
+from .analyzer import distinctive_terms, extract_brief_language_references, words_in
 
 # Precedent-brief signal is capped a bit below the generic brief-reference signal
 # (28) since it represents real judge-specific evidence but shouldn't fully
@@ -214,22 +212,6 @@ def verified_winning_brief_texts(app_config: dict[str, Any], judge_id: str) -> l
     ]
 
 
-# ---------------------------------------------------------------------------
-# Scoring
-# ---------------------------------------------------------------------------
-
-def _distinctive_terms(texts: list[str], top_n: int = TOP_TERMS_COUNT) -> list[tuple[str, int]]:
-    counts: Counter[str] = Counter()
-    for text in texts:
-        words = [
-            word.lower()
-            for word in words_in(text)
-            if len(word) >= MIN_WORD_LENGTH and word.lower() not in STOPWORDS
-        ]
-        counts.update(words)
-    return counts.most_common(top_n)
-
-
 def precedent_alignment_score(
     text: str,
     verified_brief_texts: list[str],
@@ -248,7 +230,7 @@ def precedent_alignment_score(
     if not verified_brief_texts:
         return 0, [empty_message]
 
-    terms = _distinctive_terms(verified_brief_texts)
+    terms = distinctive_terms(verified_brief_texts, TOP_TERMS_COUNT)
     if not terms:
         return 0, ["Verified briefs did not yield distinctive vocabulary to compare against."]
 
