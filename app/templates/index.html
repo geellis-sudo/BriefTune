@@ -2,6 +2,40 @@
 
 {% block title %}BriefTune{% endblock %}
 
+{% block hero %}
+  <section class="landing-hero" aria-label="BriefTune hero">
+    <canvas id="hero-wave" class="landing-hero-canvas" aria-hidden="true"></canvas>
+
+    <div class="landing-hero-inner">
+      <p class="landing-logo" aria-label="BriefTune logotype">Brief<span class="landing-logo-tune">Tune</span></p>
+
+      <div class="landing-hero-content">
+        <p class="landing-kicker">Judicial writing-style analysis</p>
+        <h1 class="landing-headline">Tune your brief to the judge who'll <em>actually</em> read it.</h1>
+        <p class="landing-subhead">Every judge has a writing style. BriefTune learns it from their own opinions and from briefs that have already won in their courtroom, then shows you exactly where your draft is out of tune.</p>
+
+        <div class="landing-cta-row">
+          <button id="hero-upload-trigger" class="landing-btn landing-btn-primary" type="button">Upload a draft</button>
+          <button id="tour-trigger" class="landing-btn landing-btn-ghost" type="button">Watch the 2-minute overview</button>
+        </div>
+
+        <div class="landing-score-chip" aria-live="polite" aria-atomic="true">
+          <div class="landing-eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+          <div>
+            <div class="landing-score-label">Affinity Score</div>
+            <div class="landing-score-value" id="hero-score-value">87</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="landing-legend" aria-hidden="true">
+        <span><span class="landing-legend-dot landing-legend-dot--blue"></span>Your draft</span>
+        <span><span class="landing-legend-dot landing-legend-dot--gold"></span>The judge's style</span>
+      </div>
+    </div>
+  </section>
+{% endblock %}
+
 {% block content %}
   <form class="analysis-form" method="post" action="{{ url_for('main.analyze') }}" enctype="multipart/form-data">
     <section class="sample-picker sample-picker--courtlistener">
@@ -303,6 +337,159 @@
   {% endif %}
 
   <script>
+    (function () {
+      var uploadTrigger = document.getElementById("hero-upload-trigger");
+      if (uploadTrigger) {
+        uploadTrigger.addEventListener("click", function () {
+          var draftInput = document.getElementById("draft_file");
+          if (!draftInput) {
+            return;
+          }
+
+          var draftSection = draftInput.closest(".sample-picker--draft");
+          if (draftSection && typeof draftSection.scrollIntoView === "function") {
+            draftSection.scrollIntoView({ behavior: "smooth", block: "start" });
+          }
+        });
+      }
+    })();
+
+    (function () {
+      var canvas = document.getElementById("hero-wave");
+      var scoreEl = document.getElementById("hero-score-value");
+      if (!canvas || !scoreEl || !canvas.getContext) {
+        return;
+      }
+
+      var ctx = canvas.getContext("2d");
+      if (!ctx) {
+        return;
+      }
+
+      var reducedMotionMedia = window.matchMedia("(prefers-reduced-motion: reduce)");
+      var reducedMotion = reducedMotionMedia.matches;
+      var width = 0;
+      var height = 0;
+      var time = 0;
+
+      var judgeWave = {
+        harmonics: [
+          { f: 1.0, a: 34 },
+          { f: 2.1, a: 14 },
+          { f: 3.7, a: 7 }
+        ],
+        speed: 0.35
+      };
+
+      var draftWave = {
+        harmonics: [
+          { f: 1.55, a: 26 },
+          { f: 2.9, a: 12 },
+          { f: 4.6, a: 8 }
+        ],
+        speed: 0.55
+      };
+
+      function resize() {
+        var dpr = Math.min(window.devicePixelRatio || 1, 2);
+        width = canvas.clientWidth;
+        height = canvas.clientHeight;
+        canvas.width = Math.floor(width * dpr);
+        canvas.height = Math.floor(height * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+
+      function waveY(x, currentTime, def, phase) {
+        var y = 0;
+        for (var i = 0; i < def.harmonics.length; i += 1) {
+          var harmonic = def.harmonics[i];
+          y += Math.sin((x / width) * Math.PI * 2 * harmonic.f + currentTime * def.speed + phase) * harmonic.a;
+        }
+        return y;
+      }
+
+      function drawGrid() {
+        ctx.strokeStyle = "rgba(143,160,184,0.11)";
+        ctx.lineWidth = 1;
+
+        for (var y = 0; y <= height; y += 64) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(width, y);
+          ctx.stroke();
+        }
+      }
+
+      function drawWave(currentTime, convergence, color, glow, phase, blendTowardJudge, alpha) {
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.beginPath();
+        var baseline = height * 0.62;
+
+        for (var x = 0; x <= width; x += 3) {
+          var judgeY = waveY(x, currentTime, judgeWave, phase);
+          var draftY = waveY(x, currentTime, draftWave, phase);
+          var waveValue = blendTowardJudge ? (judgeY * convergence + draftY * (1 - convergence)) : judgeY;
+          var y = baseline + waveValue;
+
+          if (x === 0) {
+            ctx.moveTo(x, y);
+          } else {
+            ctx.lineTo(x, y);
+          }
+        }
+
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.shadowColor = glow;
+        ctx.shadowBlur = 14;
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawFrame() {
+        time += 0.016;
+        var convergence = 0.675 + 0.325 * Math.sin(time * 0.25 - Math.PI / 2);
+
+        ctx.clearRect(0, 0, width, height);
+        drawGrid();
+
+        drawWave(time, 1, "#c9a227", "transparent", 0.9, false, 0.18);
+        drawWave(time, 1, "#c9a227", "transparent", 1.9, false, 0.18);
+        drawWave(time, 1, "#c9a227", "rgba(201,162,39,0.55)", 0, false, 1);
+        drawWave(time, convergence, "#6fa3d8", "rgba(111,163,216,0.5)", 0, true, 1);
+
+        scoreEl.textContent = String(Math.round(58 + convergence * 40));
+
+        if (!reducedMotion) {
+          window.requestAnimationFrame(drawFrame);
+        }
+      }
+
+      function onMotionChange(event) {
+        reducedMotion = event.matches;
+        if (reducedMotion) {
+          time = 6.3;
+          drawFrame();
+        } else {
+          window.requestAnimationFrame(drawFrame);
+        }
+      }
+
+      window.addEventListener("resize", resize);
+      if (typeof reducedMotionMedia.addEventListener === "function") {
+        reducedMotionMedia.addEventListener("change", onMotionChange);
+      }
+
+      resize();
+      if (reducedMotion) {
+        time = 6.3;
+        drawFrame();
+      } else {
+        window.requestAnimationFrame(drawFrame);
+      }
+    })();
+
     (function () {
       var judgeStyleInput = document.getElementById("weight_judge_style");
       var precedentInput = document.getElementById("weight_precedent_brief");
