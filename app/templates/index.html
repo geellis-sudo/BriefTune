@@ -114,7 +114,7 @@
 
       <label for="redact_terms">Names or info to redact (optional)</label>
       <textarea id="redact_terms" name="redact_terms" rows="2" placeholder="e.g. Acme Corporation, Jane Smith, 123 Main St"></textarea>
-      <p class="slider-hint">One item per line or comma-separated. Each exact match — client name, company name, address, anything else identifying — is redacted before analysis. Social Security numbers, phone numbers, and email addresses are always redacted automatically, whether or not you list them here. Case numbers and dollar figures are left visible since they're useful context and aren't privileged on their own.</p>
+      <p class="slider-hint">One item per line or comma-separated. Each exact match — client name, company name, address, anything else identifying — is redacted before analysis. Social Security numbers, phone numbers, and email addresses are always redacted automatically, whether or not you list them here. Case numbers and dollar figures are left visible since they're useful context and aren't privileged on their own. Uploads are encrypted and kept on this machine — review or delete them any time on the <a href="{{ url_for('main.documents') }}">Stored documents</a> page.</p>
 
       {% if ai_coach_available %}
         <label class="checkbox-label" for="run_ai_coach">
@@ -122,6 +122,7 @@
           Also run the AI Writing Coach on this draft
         </label>
         <p class="slider-hint">A deeper editorial pass beyond the automated checks below — argument structure, persuasiveness, and tone. Calls the Anthropic API directly with its own key and costs real money per run, separate from your Cowork/chat access.</p>
+        <p class="slider-hint privacy-notice"><strong>Confidentiality note:</strong> when this is checked, the anonymized draft text (after the redactions above) is sent to the Anthropic API. Before using it on privileged material, confirm the API account is covered by an appropriate data agreement — ideally zero-data-retention. See <code>SECURITY.md</code>. Leave unchecked and the entire analysis stays on this machine.</p>
       {% else %}
         <p class="slider-hint">Set <code>ANTHROPIC_API_KEY</code> in <code>.env</code> to unlock the optional AI Writing Coach — a deeper editorial pass beyond the automated checks below.</p>
       {% endif %}

@@ -741,6 +741,15 @@ button:active {
   transform: scale(0.98);
 }
 
+.danger-button {
+  background: linear-gradient(180deg, #b3403a, #8f2f2a);
+}
+
+.privacy-notice {
+  border-left: 3px solid var(--accent);
+  padding-left: 0.75rem;
+}
+
 .link-button:active {
   transform: none;
 }

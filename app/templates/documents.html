@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block title %}BriefTune — Stored documents{% endblock %}
+
+{% block content %}
+  <section class="results-block">
+    <h2>Stored documents</h2>
+    <p>Every draft you upload is encrypted and stored on this machine so the analysis can run without keeping plaintext on disk. Nothing here is sent anywhere. Encrypted files persist until you delete them — when a matter closes, delete its drafts here. Each deletion is permanent and is recorded in the audit log.</p>
+
+    {% if documents %}
+      <ul class="issue-list">
+        {% for document in documents %}
+          <li class="issue-item">
+            <div class="issue-meta">{{ document.stored_at.strftime('%b %d, %Y %H:%M UTC') }} · {{ '%.1f'|format(document.size_bytes / 1024) }} KB</div>
+            <p class="issue-sentence">{{ document.original_filename or 'Unknown original filename' }}</p>
+            <p class="issue-detail"><code>{{ document.stored_name }}</code></p>
+            <form method="post" action="{{ url_for('main.documents_delete', stored_name=document.stored_name) }}" onsubmit="return confirm('Permanently delete this encrypted document? This cannot be undone.');">
+              <button type="submit" class="danger-button">Delete permanently</button>
+            </form>
+          </li>
+        {% endfor %}
+      </ul>
+
+      <form method="post" action="{{ url_for('main.documents_delete_all') }}" onsubmit="return confirm('Permanently delete ALL {{ documents|length }} encrypted document(s)? This cannot be undone.');">
+        <button type="submit" class="danger-button">Delete all ({{ documents|length }})</button>
+      </form>
+    {% else %}
+      <p>No encrypted documents are currently stored.</p>
+    {% endif %}
+  </section>
+
+  <a class="secondary-link" href="{{ url_for('main.index') }}">Back to home</a>
+{% endblock %}

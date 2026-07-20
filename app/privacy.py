@@ -104,6 +104,79 @@ def log_audit_event(config: dict[str, Any], event_type: str, **details: Any) -> 
         audit_file.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
 
+@dataclass(frozen=True)
+class StoredDocument:
+    stored_name: str  # e.g. "3fa4….enc" — basename only, never a path
+    original_filename: str | None
+    size_bytes: int
+    stored_at: datetime
+
+
+def _original_filename_map(config: dict[str, Any]) -> dict[str, str]:
+    """Map encrypted-file basenames to original filenames by replaying the
+    audit log. The log — not a separate manifest — is the source of truth
+    for what each opaque .enc file was, so a missing/rotated log simply
+    yields 'unknown' rather than an error."""
+    mapping: dict[str, str] = {}
+    audit_log_path = Path(config["AUDIT_LOG_PATH"])
+    if not audit_log_path.exists():
+        return mapping
+    with audit_log_path.open("r", encoding="utf-8") as audit_file:
+        for line in audit_file:
+            try:
+                entry = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            encrypted_path = entry.get("encrypted_path")
+            filename = entry.get("filename")
+            if encrypted_path and filename:
+                mapping[Path(encrypted_path).name] = filename
+    return mapping
+
+
+def list_firm_documents(config: dict[str, Any]) -> list[StoredDocument]:
+    confidential_dir = Path(config["FIRM_CONFIDENTIAL_DIR"])
+    if not confidential_dir.exists():
+        return []
+    names = _original_filename_map(config)
+    documents = []
+    for path in sorted(confidential_dir.glob("*.enc"), key=lambda p: p.stat().st_mtime, reverse=True):
+        stat = path.stat()
+        documents.append(
+            StoredDocument(
+                stored_name=path.name,
+                original_filename=names.get(path.name),
+                size_bytes=stat.st_size,
+                stored_at=datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc),
+            )
+        )
+    return documents
+
+
+def delete_firm_document(config: dict[str, Any], stored_name: str) -> bool:
+    """Delete one encrypted upload by basename. Returns True if deleted.
+
+    The basename is validated against a strict pattern and re-anchored under
+    the confidential dir, so a crafted value like "../firm_confidential.key"
+    cannot escape."""
+    if not re.fullmatch(r"[0-9a-f]{32}\.enc", stored_name):
+        return False
+    target = Path(config["FIRM_CONFIDENTIAL_DIR"]) / stored_name
+    if not target.is_file():
+        return False
+    target.unlink()
+    log_audit_event(config, "firm_document_deleted", stored_name=stored_name)
+    return True
+
+
+def delete_all_firm_documents(config: dict[str, Any]) -> int:
+    deleted = 0
+    for document in list_firm_documents(config):
+        if delete_firm_document(config, document.stored_name):
+            deleted += 1
+    return deleted
+
+
 def get_fernet(config: dict[str, Any]) -> Fernet:
     key_path = Path(config["FIRM_CONFIDENTIAL_KEY_PATH"])
     if key_path.exists():

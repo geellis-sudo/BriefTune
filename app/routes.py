@@ -27,7 +27,13 @@ from .brief_candidates import (
 from .courtlistener_sync import add_tracked_judge, get_tracked_judge, load_tracked_judges, remove_tracked_judge, sync_all_judges, sync_judge
 from .data_loader import extract_judge_name
 from .folder_ingest import JOB_STORE, read_folder_texts
-from .privacy import anonymize_firm_text, log_audit_event, store_firm_document
+from .privacy import (
+    delete_all_firm_documents,
+    delete_firm_document,
+    list_firm_documents,
+    log_audit_event,
+    store_firm_document,
+)
 from .style_profile import build_style_profile, load_style_profile, style_alignment_score
 from .writing_coach import run_writing_coach
 
@@ -537,6 +543,31 @@ def analyze():
         firm_folder_used=folder_used,
         ai_writing_coach=ai_writing_coach,
     )
+
+
+@bp.get("/documents")
+def documents():
+    return render_template("documents.html", documents=list_firm_documents(current_app.config))
+
+
+@bp.post("/documents/delete/<stored_name>")
+def documents_delete(stored_name: str):
+    if delete_firm_document(current_app.config, stored_name):
+        flash("Encrypted document deleted. The deletion was recorded in the audit log.")
+    else:
+        flash("That document no longer exists or the name was not recognized.")
+    return redirect(url_for("main.documents"))
+
+
+@bp.post("/documents/delete-all")
+def documents_delete_all():
+    deleted = delete_all_firm_documents(current_app.config)
+    log_audit_event(current_app.config, "firm_documents_delete_all", deleted_count=deleted)
+    if deleted:
+        flash(f"Deleted {deleted} encrypted document{'s' if deleted != 1 else ''}. Recorded in the audit log.")
+    else:
+        flash("No stored documents to delete.")
+    return redirect(url_for("main.documents"))
 
 
 def read_uploaded_text(uploaded_file: FileStorage) -> tuple[str, str]:
