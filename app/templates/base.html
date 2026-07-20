@@ -18,10 +18,12 @@
       <div class="scroll-frame-cap scroll-frame-cap--br"></div>
 
       <div class="page-shell">
-        <header class="hero">
-          <h1>BriefTune</h1>
-          <p class="lede">Tune your brief to the stylistic preferences of the judge (or panel) to which your appeal has been assigned.</p>
-        </header>
+        {% block hero %}
+          <header class="hero-simple">
+            <h1>BriefTune</h1>
+            <p class="lede">Tune your brief to the stylistic preferences of the judge (or panel) to which your appeal has been assigned.</p>
+          </header>
+        {% endblock %}
 
         <main class="content-card">
           {% with messages = get_flashed_messages() %}

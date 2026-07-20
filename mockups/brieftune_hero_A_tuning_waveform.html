@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BriefTune — Mockup A: Tuning / Waveform</title>
+<style>
+  :root{
+    --navy-1:#0a1120; --navy-2:#101c33; --gold:#c9a227; --gold-soft:#e3c565;
+    --blue:#6fa3d8; --ivory:#f4efe4; --muted:#8fa0b8;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--navy-1);color:var(--ivory);font-family:'Helvetica Neue',Arial,sans-serif;overflow-x:hidden}
+  .hero{position:relative;min-height:100vh;display:flex;flex-direction:column;
+    background:radial-gradient(ellipse at 50% 120%, var(--navy-2) 0%, var(--navy-1) 65%)}
+  #wave{position:absolute;inset:0;width:100%;height:100%;display:block}
+  nav{position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;
+    padding:28px 56px}
+  .logo{font-family:Georgia,'Times New Roman',serif;font-size:26px;letter-spacing:.5px}
+  .logo .tune{color:var(--gold)}
+  .navlinks{display:flex;gap:32px;font-size:14px;color:var(--muted)}
+  .navlinks span{cursor:pointer;transition:color .2s}
+  .navlinks span:hover{color:var(--ivory)}
+  .content{position:relative;z-index:2;flex:1;display:flex;flex-direction:column;justify-content:center;
+    max-width:860px;padding:0 56px 120px}
+  .kicker{font-size:13px;letter-spacing:3px;text-transform:uppercase;color:var(--gold);margin-bottom:22px}
+  h1{font-family:Georgia,'Times New Roman',serif;font-weight:400;font-size:clamp(38px,5.2vw,64px);
+    line-height:1.12;margin-bottom:26px}
+  h1 em{font-style:italic;color:var(--gold-soft)}
+  .sub{font-size:18px;line-height:1.65;color:var(--muted);max-width:620px;margin-bottom:40px}
+  .cta-row{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+  .btn{padding:15px 34px;font-size:15px;border-radius:4px;cursor:pointer;border:none;transition:all .2s}
+  .btn-primary{background:var(--gold);color:var(--navy-1);font-weight:600}
+  .btn-primary:hover{background:var(--gold-soft);transform:translateY(-1px)}
+  .btn-ghost{background:transparent;color:var(--ivory);border:1px solid rgba(244,239,228,.3)}
+  .btn-ghost:hover{border-color:var(--gold);color:var(--gold-soft)}
+  .score-chip{position:relative;z-index:2;display:flex;align-items:center;gap:14px;margin-top:64px;
+    background:rgba(16,28,51,.65);backdrop-filter:blur(6px);border:1px solid rgba(201,162,39,.25);
+    border-radius:8px;padding:14px 22px;width:fit-content}
+  .eq{display:flex;align-items:flex-end;gap:3px;height:26px}
+  .eq i{display:block;width:4px;background:var(--gold);border-radius:2px;animation:eq 1.1s ease-in-out infinite}
+  .eq i:nth-child(1){height:40%;animation-delay:0s}
+  .eq i:nth-child(2){height:75%;animation-delay:.15s}
+  .eq i:nth-child(3){height:55%;animation-delay:.3s}
+  .eq i:nth-child(4){height:90%;animation-delay:.45s}
+  .eq i:nth-child(5){height:60%;animation-delay:.6s}
+  @keyframes eq{0%,100%{transform:scaleY(.6)}50%{transform:scaleY(1.15)}}
+  .score-chip .label{font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
+  .score-chip .val{font-family:Georgia,serif;font-size:24px;color:var(--gold-soft)}
+  .legend{position:absolute;z-index:2;bottom:34px;right:56px;display:flex;gap:26px;font-size:12px;color:var(--muted)}
+  .legend .dot{display:inline-block;width:22px;height:3px;border-radius:2px;margin-right:8px;vertical-align:middle}
+  @media (prefers-reduced-motion: reduce){ .eq i{animation:none} }
+  @media (max-width:640px){ nav,.content{padding-left:24px;padding-right:24px} .legend{right:24px} }
+</style>
+</head>
+<body>
+<section class="hero">
+  <canvas id="wave"></canvas>
+  <nav>
+    <div class="logo">Brief<span class="tune">Tune</span></div>
+    <div class="navlinks"><span>How it works</span><span>Privacy</span><span>Pricing</span><span>Sign in</span></div>
+  </nav>
+  <div class="content">
+    <div class="kicker">Judicial writing-style analysis</div>
+    <h1>Tune your brief to the judge<br>who'll <em>actually</em> read it.</h1>
+    <p class="sub">Every judge has a writing style. BriefTune learns it from their own opinions —
+      and from briefs that have already won in their courtroom — then shows you exactly where
+      your draft is out of tune.</p>
+    <div class="cta-row">
+      <button class="btn btn-primary">Upload a draft</button>
+      <button class="btn btn-ghost">Watch the 2-minute overview</button>
+    </div>
+    <div class="score-chip">
+      <div class="eq"><i></i><i></i><i></i><i></i><i></i></div>
+      <div>
+        <div class="label">Affinity Score</div>
+        <div class="val" id="scoreVal">87</div>
+      </div>
+    </div>
+  </div>
+  <div class="legend">
+    <span><span class="dot" style="background:#6fa3d8"></span>Your draft</span>
+    <span><span class="dot" style="background:#c9a227"></span>The judge's style</span>
+  </div>
+</section>
+
+<script>
+(function(){
+  const canvas = document.getElementById('wave');
+  const ctx = canvas.getContext('2d');
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let W, H, t = 0;
+
+  function resize(){
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = canvas.clientWidth; H = canvas.clientHeight;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  window.addEventListener('resize', resize); resize();
+
+  // Two waves: the judge's style (gold, steady) and your draft (blue, drifting).
+  // A convergence cycle slowly pulls the draft wave into alignment.
+  const judge = { harmonics: [ {f:1.0, a:34}, {f:2.1, a:14}, {f:3.7, a:7} ], speed: 0.35 };
+  const draftOffset = { harmonics: [ {f:1.55, a:26}, {f:2.9, a:12}, {f:4.6, a:8} ], speed: 0.55 };
+
+  function waveY(x, time, def, phase){
+    let y = 0;
+    for (const h of def.harmonics) y += Math.sin((x/W) * Math.PI * 2 * h.f + time * def.speed + phase) * h.a;
+    return y;
+  }
+
+  function drawWave(time, conv, color, glow, phase, blend){
+    ctx.beginPath();
+    const base = H * 0.62;
+    for (let x = 0; x <= W; x += 3){
+      const yJ = waveY(x, time, judge, phase);
+      const yD = waveY(x, time, draftOffset, phase);
+      const y = base + (blend ? yJ * conv + yD * (1 - conv) : yJ);
+      x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.shadowColor = glow;
+    ctx.shadowBlur = 14;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
+  function drawGrid(){
+    ctx.strokeStyle = 'rgba(143,160,184,0.05)';
+    ctx.lineWidth = 1;
+    for (let y = 0; y < H; y += 64){
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    }
+  }
+
+  const scoreEl = document.getElementById('scoreVal');
+
+  function frame(){
+    t += 0.016;
+    // convergence oscillates 0.35 -> 1.0 on a slow cycle
+    const conv = 0.675 + 0.325 * Math.sin(t * 0.25 - Math.PI/2);
+    ctx.clearRect(0, 0, W, H);
+    drawGrid();
+    // faint echo traces of the judge wave
+    ctx.globalAlpha = 0.18;
+    drawWave(t, 1, '#c9a227', 'transparent', 0.9, false);
+    drawWave(t, 1, '#c9a227', 'transparent', 1.9, false);
+    ctx.globalAlpha = 1;
+    // main judge wave (gold)
+    drawWave(t, 1, '#c9a227', 'rgba(201,162,39,0.55)', 0, false);
+    // draft wave (blue) converging toward it
+    drawWave(t, conv, '#6fa3d8', 'rgba(111,163,216,0.5)', 0, true);
+    // live-ish affinity number tied to convergence
+    scoreEl.textContent = Math.round(58 + conv * 40);
+    if (!reduced) requestAnimationFrame(frame);
+  }
+
+  if (reduced){ t = 6.3; frame(); } // one static, nearly-aligned frame
+  else requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
