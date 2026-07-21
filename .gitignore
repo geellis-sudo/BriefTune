@@ -21,3 +21,9 @@ venv/
 instance/
 *.pyc
 *.textClipping
+
+# Large media masters — the committed walkthrough is the 720p copy at app/static/walkthrough.mp4
+BriefTune Walkthrough_1080p.mp4
+*.m4a
+Project.band/
+Skillz/

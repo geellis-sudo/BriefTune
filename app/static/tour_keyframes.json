@@ -1,0 +1,93 @@
+{
+  "video": {
+    "source": "BriefTune Walkthrough_1080p.mp4",
+    "heygen_video_id": "72545805c15c445ca5a77263d4853b95",
+    "duration_seconds": 115.04,
+    "timestamp_method": "faster-whisper word-level transcription of final render, boundaries cross-checked against ffmpeg silence detection"
+  },
+  "keyframes": [
+    {
+      "id": "intro",
+      "start": 0.0,
+      "end": 20.0,
+      "label": "Overview / purpose",
+      "target": null,
+      "note": "No highlight; avatar full-frame or corner bubble over the page as a whole."
+    },
+    {
+      "id": "upload",
+      "start": 20.0,
+      "end": 25.08,
+      "label": "Upload your draft brief",
+      "target": ".sample-picker--draft",
+      "focus": "#draft_file"
+    },
+    {
+      "id": "track-judge",
+      "start": 25.08,
+      "end": 32.68,
+      "label": "Track the judge(s)",
+      "target": ".sample-picker--courtlistener",
+      "focus": "#courtlistener_judge_name"
+    },
+    {
+      "id": "precedent-pool",
+      "start": 32.68,
+      "end": 54.06,
+      "label": "Flagged brief mentions, verification, Auto-Research",
+      "target": ".sample-picker--brief-candidates",
+      "sub_cues": [
+        { "at": 42.42, "target": ".brief-candidate-verify", "note": "manual verification mentioned" },
+        { "at": 47.06, "target": ".brief-candidate-auto-verify", "note": "Auto-Research mentioned" }
+      ]
+    },
+    {
+      "id": "comparison-sources",
+      "start": 54.06,
+      "end": 64.72,
+      "label": "Select comparison sources",
+      "target": ".sample-picker--weights",
+      "focus": "#compare_judge_id",
+      "sub_cues": [
+        { "at": 60.5, "target": ".sample-picker--folder", "note": "firm folder mentioned (approximate; refine visually)" }
+      ]
+    },
+    {
+      "id": "affinity-score",
+      "start": 64.72,
+      "end": 73.32,
+      "label": "Affinity Score explained",
+      "target": ".affinity-score-heading"
+    },
+    {
+      "id": "sliders",
+      "start": 73.32,
+      "end": 80.44,
+      "label": "Weighting sliders",
+      "target": ".weight-sliders",
+      "focus": "#weight_judge_style"
+    },
+    {
+      "id": "privacy",
+      "start": 80.44,
+      "end": 90.28,
+      "label": "Anonymization / confidentiality",
+      "target": "#redact_terms"
+    },
+    {
+      "id": "results",
+      "start": 90.28,
+      "end": 106.94,
+      "label": "Results walkthrough",
+      "target": null,
+      "note": "Results live on results.html (.summary-grid), not the index page. Overlay build decision: either show a static screenshot/mock of results during this beat, or keep the avatar full-frame. The dual-score comparison toggle is NOT mentioned in the final VO — .comparison-toggle keyframe dropped, as planned."
+    },
+    {
+      "id": "close",
+      "start": 106.94,
+      "end": 115.04,
+      "label": "Close — upload, track, compare, tune",
+      "target": null
+    }
+  ]
+}

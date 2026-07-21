@@ -107,10 +107,10 @@
         </div>
       </div>
 
-      <input id="draft_file" name="draft_file" type="file" accept=".txt,.pdf,text/plain,application/pdf" class="draft-file-input">
+      <input id="draft_file" name="draft_file" type="file" accept=".txt,.pdf,.docx,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" class="draft-file-input">
       <label for="draft_file" class="draft-upload-button">Upload Now</label>
       <span class="draft-filename" id="draft-filename-display"></span>
-      <p class="slider-hint">Accepts a <code>.txt</code> or PDF file.</p>
+      <p class="slider-hint">Accepts a <code>.txt</code>, PDF, or Word (<code>.docx</code>) file.</p>
 
       <label for="redact_terms">Names or info to redact (optional)</label>
       <textarea id="redact_terms" name="redact_terms" rows="2" placeholder="e.g. Acme Corporation, Jane Smith, 123 Main St"></textarea>
@@ -337,6 +337,9 @@
     </section>
   {% endif %}
 
+  <script src="{{ url_for('static', filename='tour.js') }}"
+          data-video="{{ url_for('static', filename='walkthrough.mp4') }}"
+          data-keyframes="{{ url_for('static', filename='tour_keyframes.json') }}"></script>
   <script>
     (function () {
       var uploadTrigger = document.getElementById("hero-upload-trigger");
@@ -543,6 +546,6 @@
 
   <section class="helper-panel">
     <h2>How it works</h2>
-    <p>Upload your draft brief as a <code>.txt</code> or PDF file. It's processed locally and anonymized before analysis — any names or other identifying details you list are redacted, and Social Security numbers, phone numbers, and email addresses are always redacted automatically. Case numbers and dollar figures are left visible. From there, optionally compare it against a tracked judge's opinions and verified winning briefs, and/or your firm's own folder of winning briefs, using the weighting sliders to control how much each comparison counts.</p>
+    <p>Upload your draft brief as a <code>.txt</code>, PDF, or Word (<code>.docx</code>) file. It's processed locally and anonymized before analysis — any names or other identifying details you list are redacted, and Social Security numbers, phone numbers, and email addresses are always redacted automatically. Case numbers and dollar figures are left visible. From there, optionally compare it against a tracked judge's opinions and verified winning briefs, and/or your firm's own folder of winning briefs, using the weighting sliders to control how much each comparison counts.</p>
   </section>
 {% endblock %}

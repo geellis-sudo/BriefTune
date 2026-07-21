@@ -5,6 +5,7 @@ from io import BytesIO
 
 from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
 from werkzeug.datastructures import FileStorage
+from docx import Document as DocxDocument
 from pypdf import PdfReader
 
 from .ai_verification import (
@@ -577,6 +578,11 @@ def read_uploaded_text(uploaded_file: FileStorage) -> tuple[str, str]:
     if filename.lower().endswith(".pdf"):
         extracted_text = extract_text_from_pdf(BytesIO(file_bytes))
         return extracted_text.strip(), filename
+
+    if filename.lower().endswith(".docx"):
+        document = DocxDocument(BytesIO(file_bytes))
+        paragraphs = [paragraph.text.strip() for paragraph in document.paragraphs if paragraph.text.strip()]
+        return "\n\n".join(paragraphs).strip(), filename
 
     raw_text = file_bytes.decode("utf-8", errors="ignore").strip()
     return raw_text, filename
