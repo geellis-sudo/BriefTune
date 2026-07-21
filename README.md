@@ -30,7 +30,7 @@ It is built to run even before you add real judge opinion files. If no files exi
 
 ## Add real opinion files later
 
-Place `.txt` files in `data/opinions/`. Each file can contain one opinion or excerpt. You can also upload `.txt` or PDF files in the app; PDFs will be converted to text automatically before analysis. The app will automatically load `.txt` files on startup, letting you build a judge-specific corpus over time.
+Place `.txt` files in `data/opinions/`. Each file can contain one opinion or excerpt. You can also upload `.txt`, PDF, or Word (`.docx`) files in the app; PDFs and Word documents will be converted to text automatically before analysis. The app will automatically load `.txt` files on startup, letting you build a judge-specific corpus over time.
 
 ## Tests
 
