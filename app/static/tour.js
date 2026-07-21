@@ -42,6 +42,11 @@
       '    <button type="button" class="tour-close" aria-label="Close tour">&times;</button>' +
       "  </div>" +
       '  <video class="tour-video" playsinline preload="auto"></video>' +
+      '  <div class="tour-controls">' +
+      '    <button type="button" class="tour-playpause" aria-label="Pause">&#10074;&#10074;</button>' +
+      '    <input type="range" class="tour-scrubber" min="0" max="100" step="0.1" value="0" aria-label="Video position">' +
+      '    <span class="tour-time">0:00</span>' +
+      "  </div>" +
       "</div>";
     document.body.appendChild(overlay);
 
@@ -55,7 +60,15 @@
       label: overlay.querySelector(".tour-beat-label"),
       close: overlay.querySelector(".tour-close"),
       video: video,
+      playpause: overlay.querySelector(".tour-playpause"),
+      scrubber: overlay.querySelector(".tour-scrubber"),
+      time: overlay.querySelector(".tour-time"),
     };
+  }
+
+  function formatTime(seconds) {
+    var s = Math.max(0, Math.floor(seconds));
+    return Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2);
   }
 
   function findKeyframe(t) {
@@ -126,6 +139,13 @@
     }
 
     if (state.activeTargetEl) positionSpotlight();
+
+    // Keep the scrubber and clock in sync (skip while the user is dragging).
+    if (!state.scrubbing && els.video.duration) {
+      els.scrubber.value = (t / els.video.duration) * 100;
+      els.time.textContent = formatTime(t);
+    }
+
     state.rafId = window.requestAnimationFrame(tick);
   }
 
@@ -143,6 +163,33 @@
         var v = state.els.video;
         if (v.paused) v.play();
         else v.pause();
+      });
+
+      state.els.playpause.addEventListener("click", function () {
+        var v = state.els.video;
+        if (v.paused) v.play();
+        else v.pause();
+      });
+      state.els.video.addEventListener("play", function () {
+        state.els.playpause.innerHTML = "&#10074;&#10074;";
+        state.els.playpause.setAttribute("aria-label", "Pause");
+      });
+      state.els.video.addEventListener("pause", function () {
+        state.els.playpause.innerHTML = "&#9654;";
+        state.els.playpause.setAttribute("aria-label", "Play");
+      });
+
+      state.els.scrubber.addEventListener("input", function () {
+        state.scrubbing = true;
+        var v = state.els.video;
+        if (v.duration) {
+          var t = (state.els.scrubber.value / 100) * v.duration;
+          v.currentTime = t;
+          state.els.time.textContent = formatTime(t);
+        }
+      });
+      state.els.scrubber.addEventListener("change", function () {
+        state.scrubbing = false;
       });
     }
     state.open = true;

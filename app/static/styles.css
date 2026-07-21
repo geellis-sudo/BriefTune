@@ -791,20 +791,20 @@ button:active {
 .tour-video-shell {
   position: fixed;
   right: 24px;
-  bottom: 24px;
+  top: 24px;
   width: min(420px, calc(100vw - 48px));
   border-radius: 16px;
   overflow: hidden;
   background: #0f172a;
   box-shadow: 0 18px 50px rgba(15, 23, 42, 0.5);
   pointer-events: auto;
-  transition: right 0.5s ease, bottom 0.5s ease, width 0.5s ease, transform 0.5s ease;
+  transition: right 0.5s ease, top 0.5s ease, width 0.5s ease, transform 0.5s ease;
 }
 
 .tour-video-shell--centered {
   right: 50%;
-  bottom: 50%;
-  transform: translate(50%, 50%);
+  top: 50%;
+  transform: translate(50%, -50%);
   width: min(720px, calc(100vw - 48px));
 }
 
@@ -840,6 +840,59 @@ button:active {
   display: block;
   width: 100%;
   cursor: pointer;
+}
+
+.tour-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.45rem 0.9rem 0.6rem;
+}
+
+.tour-playpause {
+  background: transparent;
+  border: 0;
+  color: #f8fafc;
+  font-size: 0.85rem;
+  line-height: 1;
+  padding: 0.2rem;
+  cursor: pointer;
+  min-width: 1.6rem;
+}
+
+.tour-scrubber {
+  flex: 1;
+  appearance: none;
+  -webkit-appearance: none;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(248, 250, 252, 0.25);
+  cursor: pointer;
+}
+
+.tour-scrubber::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 0;
+}
+
+.tour-scrubber::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 0;
+}
+
+.tour-time {
+  color: #f8fafc;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  min-width: 2.4rem;
+  text-align: right;
 }
 
 body.tour-active {
