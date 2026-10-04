@@ -43,3 +43,7 @@ pytest
 ## Security & confidentiality
 
 Draft briefs are privileged material — read `SECURITY.md` before using BriefTune on a real matter. The short version: the core analysis runs entirely locally; uploads are encrypted at rest and redacted (your listed terms plus SSNs/phones/emails) before anything is indexed; the optional AI features (Writing Coach, Auto-Research) send anonymized or public-record text to the Anthropic API and only run if you set `ANTHROPIC_API_KEY` in `.env`. Before enabling those features on privileged documents, confirm with your firm's IT/compliance function that the API account is covered by an appropriate data agreement (ideally zero-data-retention). Stored uploads can be reviewed and deleted from the app's Stored documents page. This is engineering guidance, not legal advice — the firm's own ethics/compliance review still governs.
+
+## License
+
+BriefTune is licensed under the GNU Affero General Public License v3.0. See [LICENSE](LICENSE).

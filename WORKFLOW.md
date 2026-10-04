@@ -60,7 +60,7 @@ Run this from the project root (with the venv active, `.env` filled in) to sync 
 Example crontab entry to run it every morning at 6am:
 
 ```
-0 6 * * * cd /Users/georgeellis/Desktop/Claude/Python\ Projects/brieftune && .venv/bin/flask --app run.py courtlistener-sync-all >> data/courtlistener_sync.log 2>&1
+0 6 * * * cd /path/to/brieftune && .venv/bin/flask --app run.py courtlistener-sync-all >> data/courtlistener_sync.log 2>&1
 ```
 
 Note: oral argument transcript text depends on CourtListener's speech-to-text field, which is newer and hasn't been verified against a live response — opinions are reliable today, transcripts may need a small field-name adjustment once you test against your real token.
